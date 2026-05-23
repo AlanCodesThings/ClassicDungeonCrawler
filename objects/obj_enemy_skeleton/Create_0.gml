@@ -1,5 +1,6 @@
 event_inherited();
-enemy_type = ENEMY_SKELETON;
+enemy_type   = ENEMY_SKELETON;
+ai_timer_max = 25;
 var f = global.floor_number;
 hp     = round(20 * (1 + f * 0.15)); max_hp = hp;
 damage = round(10 * (1 + f * 0.10));

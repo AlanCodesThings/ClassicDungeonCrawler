@@ -10,7 +10,6 @@
 #macro BOSS_DRAKE      12
 #macro BOSS_NECRO      13
 #macro BOSS_DEMON      14
-#macro MOVE_ANIM_DELAY 8
 
 // ── Core grid utilities ──────────────────────────────────────────────────────
 
@@ -116,8 +115,8 @@ function bump_attack(target_id) {
 	var cm = p.crit_mult;
 	if (variable_instance_exists(p, "invisible") && p.invisible) {
 		cc = 1.0;
-		p.invisible = false;
-		p.vanish_turns = 0;
+		p.invisible   = false;
+		p.vanish_timer = 0;
 	}
 	deal_damage(target_id, p.x, p.y, p.damage, cc, cm, 0);
 }
@@ -147,7 +146,7 @@ function grid_attack_tile(gx, gy, dmg, src_id, cc, cm) {
 	if (!instance_exists(global.player_inst)) return;
 	var p = global.player_inst;
 	if (p.grid_x != gx || p.grid_y != gy) return;
-	if (p.invincible_turns > 0) return;
+	if (p.invincible_timer > 0) return;
 	// Shield block
 	if (variable_instance_exists(p, "shield_active") && p.shield_active) return;
 	// Smoke protection
@@ -162,7 +161,7 @@ function grid_attack_tile(gx, gy, dmg, src_id, cc, cm) {
 	}
 	var actual_dmg = max(1, round(dmg * (1 - p.armor)));
 	p.hp -= actual_dmg;
-	p.invincible_turns = 1;
+	p.invincible_timer = 30;
 	p.hit_flash = 10;
 	var _dn = instance_create_layer(p.x + random_range(-6, 6), p.y - 14, "Instances", obj_damage_number);
 	_dn.value   = actual_dmg;
@@ -172,70 +171,6 @@ function grid_attack_tile(gx, gy, dmg, src_id, cc, cm) {
 		p.is_dead = true;
 		with (global.player_inst) { alarm[0] = 120; }
 	}
-}
-
-// ── Turn processing ──────────────────────────────────────────────────────────
-
-function process_turn() {
-	global.turn_counter++;
-
-	// Player-specific state ticks
-	if (instance_exists(global.player_inst)) {
-		var p = global.player_inst;
-		// Decrement turn-based ability cooldowns
-		if (p.ability_dash_cd  > 0) p.ability_dash_cd--;
-		if (p.ability_util_cd  > 0) p.ability_util_cd--;
-		if (p.ability_dmg_cd   > 0) p.ability_dmg_cd--;
-		if (p.ability_ult_cd   > 0) p.ability_ult_cd--;
-		if (p.invincible_turns > 0) p.invincible_turns--;
-		// Vanish countdown
-		if (variable_instance_exists(p, "vanish_turns") && p.vanish_turns > 0) {
-			p.vanish_turns--;
-			if (p.vanish_turns <= 0) p.invisible = false;
-		}
-		// Enchanted quiver
-		if (variable_instance_exists(p, "ult_turns_left") && p.ult_turns_left > 0) {
-			p.ult_turns_left--;
-			if (p.ult_turns_left <= 0) p.ult_active = false;
-		}
-		// 2H mode
-		if (variable_instance_exists(p, "two_hand_turns_left") && p.two_hand_turns_left > 0) {
-			p.two_hand_turns_left--;
-			if (p.two_hand_turns_left <= 0) p.two_hand_active = false;
-		}
-	}
-
-	// Tick smoke tiles (remove expired)
-	var _new_smoke = [];
-	for (var _i = 0; _i < array_length(global.smoke_tiles); _i++) {
-		var _s = global.smoke_tiles[_i];
-		_s.turns_left--;
-		if (_s.turns_left > 0) array_push(_new_smoke, _s);
-	}
-	global.smoke_tiles = _new_smoke;
-
-	// Fire expired telegraphs; keep live ones
-	var _new_tele = [];
-	for (var _i = 0; _i < array_length(global.telegraph_tiles); _i++) {
-		var _t = global.telegraph_tiles[_i];
-		_t.turns_left--;
-		if (_t.turns_left <= 0) {
-			if (_t.dmg > 0) grid_attack_tile(_t.gx, _t.gy, _t.dmg, _t.src_id, _t.cc, _t.cm);
-		} else {
-			array_push(_new_tele, _t);
-		}
-	}
-	global.telegraph_tiles = _new_tele;
-
-	// Reset per-turn shield after telegraphs fire
-	if (instance_exists(global.player_inst)) {
-		if (variable_instance_exists(global.player_inst, "shield_active"))
-			global.player_inst.shield_active = false;
-	}
-
-	// All enemies and bosses act
-	with (obj_enemy) { if (instance_exists(id)) enemy_take_turn(id); }
-	with (obj_boss)  { if (instance_exists(id)) boss_take_turn(id);  }
 }
 
 // ── Pathfinding ──────────────────────────────────────────────────────────────
@@ -264,8 +199,6 @@ function grid_pathfind_step(from_gx, from_gy, to_gx, to_gy, can_phase) {
 
 function enemy_take_turn(eid) {
 	if (!instance_exists(eid)) return;
-	// Pin mechanic: pinned enemies skip their turn
-	if (eid.turns_until_attack > 0) { eid.turns_until_attack--; return; }
 	switch (eid.enemy_type) {
 		case ENEMY_SKELETON: ai_skeleton_turn(eid); break;
 		case ENEMY_ZOMBIE:   ai_zombie_turn(eid);   break;
@@ -389,7 +322,7 @@ function ai_archer_mob_turn(eid) {
 
 	// In range and has LoS — telegraph shot
 	if (dist <= 8 && eid.attack_cd_turns <= 0 && grid_has_los(eid.grid_x, eid.grid_y, px, py)) {
-		add_telegraph_damage(px, py, make_color_rgb(255, 140, 0), 1, eid.damage, eid, 0.1, 2.0);
+		add_telegraph_damage(px, py, make_color_rgb(255, 140, 0), 60, eid.damage, eid, 0.1, 2.0);
 		eid.attack_cd_turns = 2;
 		return;
 	}
@@ -433,9 +366,9 @@ function ai_mage_mob_turn(eid) {
 		// Perpendicular direction for fan
 		var pdx = -snap.dy, pdy = snap.dx;
 		var mage_col = make_color_rgb(180, 50, 255);
-		add_telegraph_damage(px,        py,        mage_col, 1, eid.damage, eid, 0, 1);
-		add_telegraph_damage(px + pdx,  py + pdy,  mage_col, 1, eid.damage, eid, 0, 1);
-		add_telegraph_damage(px - pdx,  py - pdy,  mage_col, 1, eid.damage, eid, 0, 1);
+		add_telegraph_damage(px,        py,        mage_col, 60, eid.damage, eid, 0, 1);
+		add_telegraph_damage(px + pdx,  py + pdy,  mage_col, 60, eid.damage, eid, 0, 1);
+		add_telegraph_damage(px - pdx,  py - pdy,  mage_col, 60, eid.damage, eid, 0, 1);
 		eid.attack_cd_turns = 2;
 		return;
 	}
@@ -487,33 +420,33 @@ function boss_golem_turn(bid) {
 	// Melee when adjacent
 	if (dist <= 2) grid_attack_tile(px, py, bid.damage, bid, 0, 1);
 
-	// Rock volley every 3 turns — scatter tiles near player, 1-turn warning
+	// Rock volley every 3 turns — scatter tiles near player, 1s warning
 	if (bid.boss_turn_counter mod 3 == 0) {
 		var cnt = (bid.phase == 1) ? 4 : 6;
 		for (var _i = 0; _i < cnt; _i++) {
 			var rx = px + irandom_range(-3, 3);
 			var ry = py + irandom_range(-3, 3);
 			if (grid_is_walkable(rx, ry)) {
-				add_telegraph_damage(rx, ry, make_color_rgb(255, 140, 0), 1,
+				add_telegraph_damage(rx, ry, make_color_rgb(255, 140, 0), 60,
 				                     round(bid.damage * 0.8), bid, 0, 1);
 			}
 		}
 	}
 
-	// Stomp every 4 turns — 5-tile cross on player, 2-turn warning (orange → red)
+	// Stomp every 4 turns — 5-tile cross on player, 2s warning then 0.5s red
 	if (bid.boss_turn_counter mod 4 == 1) {
 		var stomp_col = make_color_rgb(255, 140, 0);
 		for (var _i = -2; _i <= 2; _i++) {
-			add_telegraph_damage(px + _i, py,      stomp_col, 2, bid.damage * 2, bid, 0, 1);
-			if (_i != 0) add_telegraph_damage(px, py + _i, stomp_col, 2, bid.damage * 2, bid, 0, 1);
+			add_telegraph_damage(px + _i, py,      stomp_col, 120, bid.damage * 2, bid, 0, 1);
+			if (_i != 0) add_telegraph_damage(px, py + _i, stomp_col, 120, bid.damage * 2, bid, 0, 1);
 		}
 	}
 
-	// Phase 2 — shockwave ring (expands outward 1 tile/turn for 3 turns)
+	// Phase 2 — shockwave ring (3 rings, 90/60/30 frame delays)
 	if (bid.phase == 2 && bid.boss_turn_counter mod 6 == 0) {
 		for (var _r = 3; _r <= 5; _r++) {
-			var _tl  = _r - 2; // r=3→tl=1, r=4→tl=2, r=5→tl=3
-			var _col = (_tl == 1) ? c_red : make_color_rgb(255, 140, 0);
+			var _tl  = (_r - 2) * 30; // r=3→30f, r=4→60f, r=5→90f
+			var _col = (_tl <= 30) ? c_red : make_color_rgb(255, 140, 0);
 			for (var _dx = -_r; _dx <= _r; _dx++) {
 				var _dy_abs = _r - abs(_dx);
 				add_telegraph_damage(bx + _dx, by + _dy_abs, _col, _tl, round(bid.damage * 1.5), bid, 0, 1);
@@ -540,7 +473,7 @@ function boss_demon_turn(bid) {
 			var _sx  = bx + round(cos(degtorad(_ang)) * 4);
 			var _sy  = by + round(-sin(degtorad(_ang)) * 4);
 			if (grid_is_walkable(_sx, _sy)) {
-				add_telegraph_damage(_sx, _sy, make_color_rgb(255, 80, 50), 1, bid.damage, bid, 0, 1);
+				add_telegraph_damage(_sx, _sy, make_color_rgb(255, 80, 50), 60, bid.damage, bid, 0, 1);
 			}
 		}
 		bid.spiral_angle = (bid.spiral_angle + 45) mod 360;
@@ -553,7 +486,7 @@ function boss_demon_turn(bid) {
 			var rx = px + irandom_range(-2, 2);
 			var ry = py + irandom_range(-2, 2);
 			if (grid_is_walkable(rx, ry)) {
-				add_telegraph_damage(rx, ry, make_color_rgb(255, 100, 50), 2,
+				add_telegraph_damage(rx, ry, make_color_rgb(255, 100, 50), 120,
 				                     round(bid.damage * 1.2), bid, 0, 1);
 			}
 		}
@@ -565,11 +498,11 @@ function boss_demon_turn(bid) {
 		bid.nova_fired = true;
 		var nova_dmg = bid.damage * 2;
 		for (var _r = 1; _r <= 3; _r++) {
-			var _tl  = 4 - _r; // r=1→tl=3, r=2→tl=2, r=3→tl=1
+			var _tl  = (4 - _r) * 60; // r=1→180f, r=2→120f, r=3→60f
 			var _col;
-			if (_tl == 1)      _col = c_red;
-			else if (_tl == 2) _col = make_color_rgb(255, 140, 0);
-			else               _col = make_color_rgb(255, 255, 0);
+			if (_tl <= 60)       _col = c_red;
+			else if (_tl <= 120) _col = make_color_rgb(255, 140, 0);
+			else                 _col = make_color_rgb(255, 255, 0);
 			for (var _dx = -_r; _dx <= _r; _dx++) {
 				var _da = _r - abs(_dx);
 				add_telegraph_damage(bx + _dx, by + _da, _col, _tl, nova_dmg, bid, 0, 1);
@@ -590,7 +523,7 @@ function boss_wraith_turn(bid) {
 			var rx = p.grid_x + irandom_range(-4, 4);
 			var ry = p.grid_y + irandom_range(-4, 4);
 			if (grid_is_walkable(rx, ry))
-				add_telegraph_damage(rx, ry, make_color_rgb(100, 200, 255), 1, bid.damage, bid, 0, 1);
+				add_telegraph_damage(rx, ry, make_color_rgb(100, 200, 255), 60, bid.damage, bid, 0, 1);
 		}
 	}
 }
@@ -603,7 +536,7 @@ function boss_drake_turn(bid) {
 		var snap = grid_snap_dir_8(p.grid_x - bid.grid_x, p.grid_y - bid.grid_y);
 		var cells = grid_line_cells(bid.grid_x, bid.grid_y, snap.dx, snap.dy, 8);
 		for (var _i = 0; _i < array_length(cells); _i++) {
-			add_telegraph_damage(cells[_i].gx, cells[_i].gy, make_color_rgb(255, 100, 0), 1,
+			add_telegraph_damage(cells[_i].gx, cells[_i].gy, make_color_rgb(255, 100, 0), 60,
 			                     round(bid.damage * 1.5), bid, 0, 1);
 		}
 	}
@@ -620,7 +553,7 @@ function boss_necro_turn(bid) {
 			var _sx = bx + round(cos(degtorad(_ang)) * 3);
 			var _sy = by + round(-sin(degtorad(_ang)) * 3);
 			if (grid_is_walkable(_sx, _sy))
-				add_telegraph_damage(_sx, _sy, make_color_rgb(100, 255, 100), 2, bid.damage, bid, 0, 1);
+				add_telegraph_damage(_sx, _sy, make_color_rgb(100, 255, 100), 120, bid.damage, bid, 0, 1);
 		}
 	}
 }

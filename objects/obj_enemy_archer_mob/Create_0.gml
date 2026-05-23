@@ -1,5 +1,6 @@
 event_inherited();
-enemy_type = ENEMY_ARCHER;
+enemy_type   = ENEMY_ARCHER;
+ai_timer_max = 40;
 var f = global.floor_number;
 hp     = round(25 * (1 + f * 0.15)); max_hp = hp;
 damage = round(9  * (1 + f * 0.10));

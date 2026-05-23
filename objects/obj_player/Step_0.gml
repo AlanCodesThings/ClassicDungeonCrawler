@@ -1,7 +1,13 @@
 if (is_dead) exit;
-// Visual timers (run every frame regardless of turn gate)
-if (hit_flash > 0) hit_flash--;
-if (move_anim_timer > 0) move_anim_timer--;
+
+// Frame timers
+if (hit_flash       > 0) hit_flash--;
+if (invincible_timer > 0) invincible_timer--;
+if (move_cd         > 0) move_cd--;
+if (ability_dash_cd > 0) ability_dash_cd--;
+if (ability_util_cd > 0) ability_util_cd--;
+if (ability_dmg_cd  > 0) ability_dmg_cd--;
+if (ability_ult_cd  > 0) ability_ult_cd--;
 
 // Lerp visual position toward grid tile center
 x = lerp(x, grid_x * TILE_SIZE + TILE_SIZE / 2, 0.25);
@@ -13,7 +19,7 @@ var _mdy = mouse_y - y;
 var _ml  = sqrt(_mdx * _mdx + _mdy * _mdy);
 if (_ml > 10) { aim_dx = _mdx / _ml; aim_dy = _mdy / _ml; }
 
-// Stairs detection — checked every frame but triggers on tile match
+// Stairs detection — checked every frame, triggers on tile match
 var do_descend = false;
 with (obj_stairs) {
 	if (grid_x == other.grid_x && grid_y == other.grid_y) {

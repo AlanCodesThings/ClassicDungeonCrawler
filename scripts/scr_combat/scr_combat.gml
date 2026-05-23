@@ -8,7 +8,7 @@ function deal_damage(target_id, src_x, src_y, base_dmg, crit_chance, crit_mult, 
 	var dmg = is_crit ? round(base_dmg * crit_mult) : base_dmg;
 	dmg = max(1, round(dmg * (1 - target_id.armor)));
 	target_id.hp -= dmg;
-	target_id.invincible_timer = 1; // blocks duplicate hits in same process_turn call
+	target_id.invincible_timer = 30;
 	target_id.hit_flash = 10;
 	var _dn = instance_create_layer(target_id.x + random_range(-6, 6), target_id.y - 14,
 	                                "Instances", obj_damage_number);

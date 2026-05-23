@@ -8,9 +8,9 @@ if (_tc > 0) {
 	for (var _ti = 0; _ti < _tc; _ti++) {
 		var _t = global.telegraph_tiles[_ti];
 		var _col = _t.col;
-		// Urgency: override to bright red when 1 turn away
-		if (_t.turns_left == 1 && _t.dmg > 0) _col = c_red;
-		var _alpha = (_t.turns_left == 1) ? 0.60 : 0.35;
+		// Urgency: override to bright red in final 0.5s
+		if (_t.turns_left <= 30 && _t.dmg > 0) _col = c_red;
+		var _alpha = (_t.turns_left <= 30) ? 0.60 : 0.35;
 		draw_set_color(_col);
 		draw_set_alpha(_alpha);
 		draw_rectangle(_t.gx * TILE_SIZE, _t.gy * TILE_SIZE,
