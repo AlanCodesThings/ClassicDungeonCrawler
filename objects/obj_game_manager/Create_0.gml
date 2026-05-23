@@ -1,0 +1,13 @@
+persistent = true;
+global.floor_number = 0;
+global.player_class = "";
+global.player_inst = noone;
+global.map_grid = -1;
+global.room_list = [];
+global.boss_floor = false;
+global.boss_killed = false;
+global.player_spawn_x = 200;
+global.player_spawn_y = 200;
+global.won = false;
+global.cleaning_up = false;
+room_goto(rm_class_select);

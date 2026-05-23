@@ -1,0 +1,10 @@
+hp = 1000; max_hp = 1000; damage = 20; move_speed = 1.5; armor = 0.0;
+col_half_w = 40; col_half_h = 40;
+knockback_x = 0; knockback_y = 0;
+invincible_timer = 0; hit_flash = 0;
+phase = 1; is_dead = false; depth = -5;
+attack_cd = 0; attack_cd_max = 90;
+aggro_range = 9999;
+pin_timer = 0;
+on_phase2 = function() {};
+global.boss_killed = false;
