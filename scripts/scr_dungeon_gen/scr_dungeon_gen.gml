@@ -1,14 +1,17 @@
 #macro TILE_WALL 0
 #macro TILE_FLOOR 1
 #macro TILE_STAIRS 2
-#macro MAP_W 72
-#macro MAP_H 54
+#macro MAP_W 52
+#macro MAP_H 40
 #macro TILE_SIZE 32
 
 function generate_dungeon(floor_num) {
-	global.room_list = [];
-	global.boss_floor = false;
-	global.boss_killed = false;
+	global.room_list      = [];
+	global.boss_floor     = false;
+	global.boss_killed    = false;
+	global.telegraph_tiles = [];
+	global.smoke_tiles     = [];
+	global.turn_counter    = 0;
 	if (ds_exists(global.map_grid, ds_type_grid)) ds_grid_destroy(global.map_grid);
 	global.map_grid = ds_grid_create(MAP_W, MAP_H);
 	ds_grid_set_region(global.map_grid, 0, 0, MAP_W-1, MAP_H-1, TILE_WALL);
@@ -31,7 +34,7 @@ function BSPNode(lx, ly, lw, lh) constructor {
 }
 
 function bsp_split(node, lvl) {
-	if (lvl >= 5) return;
+	if (lvl >= 4) return;
 	var split_horiz;
 	if (node.nh > node.nw * 1.25) split_horiz = true;
 	else if (node.nw > node.nh * 1.25) split_horiz = false;
@@ -106,8 +109,10 @@ function place_stairs_and_spawn(floor_num) {
 	var cnt = array_length(global.room_list);
 	if (cnt < 1) return;
 	var sr = global.room_list[0];
-	global.player_spawn_x = (sr.rx + sr.rw div 2) * TILE_SIZE + TILE_SIZE div 2;
-	global.player_spawn_y = (sr.ry + sr.rh div 2) * TILE_SIZE + TILE_SIZE div 2;
+	global.player_spawn_gx = sr.rx + sr.rw div 2;
+	global.player_spawn_gy = sr.ry + sr.rh div 2;
+	global.player_spawn_x  = global.player_spawn_gx * TILE_SIZE + TILE_SIZE div 2;
+	global.player_spawn_y  = global.player_spawn_gy * TILE_SIZE + TILE_SIZE div 2;
 	if (cnt < 2) return;
 	var lr = global.room_list[cnt - 1];
 	var sx = (lr.rx + lr.rw div 2) * TILE_SIZE + TILE_SIZE div 2;
@@ -119,7 +124,7 @@ function spawn_enemies(floor_num) {
 	var cnt = array_length(global.room_list);
 	for (var i = 1; i < cnt; i++) {
 		var rm = global.room_list[i];
-		var per = clamp(6 + floor_num div 2, 6, 22);
+		var per = clamp(2 + floor_num div 5, 2, 8);
 		repeat(per) {
 			var ex = (rm.rx + 1 + irandom(rm.rw - 3)) * TILE_SIZE + TILE_SIZE div 2;
 			var ey = (rm.ry + 1 + irandom(rm.rh - 3)) * TILE_SIZE + TILE_SIZE div 2;
@@ -138,7 +143,7 @@ function pick_enemy(f) {
 }
 
 function gen_boss_floor(floor_num) {
-	var ax = 4, ay = 4, aw = 63, ah = 46; // fits within 72x54 map
+	var ax = 3, ay = 3, aw = 46, ah = 34; // fits within 52x40 map
 	ds_grid_set_region(global.map_grid, ax, ay, ax + aw - 1, ay + ah - 1, TILE_FLOOR);
 	var my = ay + ah div 2;
 	for (var i = 1; i < ax; i++) {
@@ -146,8 +151,10 @@ function gen_boss_floor(floor_num) {
 		ds_grid_set(global.map_grid, i, my,     TILE_FLOOR);
 		ds_grid_set(global.map_grid, i, my + 1, TILE_FLOOR);
 	}
-	global.player_spawn_x = 2 * TILE_SIZE + TILE_SIZE div 2;
-	global.player_spawn_y = my * TILE_SIZE + TILE_SIZE div 2;
+	global.player_spawn_gx = 2;
+	global.player_spawn_gy = my;
+	global.player_spawn_x  = 2 * TILE_SIZE + TILE_SIZE div 2;
+	global.player_spawn_y  = my * TILE_SIZE + TILE_SIZE div 2;
 	var boss_obj;
 	switch (floor_num) {
 		case 10: boss_obj = obj_boss_golem;  break;

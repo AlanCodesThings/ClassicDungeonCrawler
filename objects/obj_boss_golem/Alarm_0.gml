@@ -1,2 +1,1 @@
-stomp_telegraph = 40;
-alarm[0] = (phase == 1) ? 200 : 130;
+// Retired — attack logic moved to boss_golem_turn in scr_grid.gml

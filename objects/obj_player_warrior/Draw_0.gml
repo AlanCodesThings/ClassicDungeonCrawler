@@ -40,8 +40,8 @@ if (two_hand_active && !flash) {
 
 // -- Sword (thrust animation extends blade forward) --
 var sw_len = two_hand_active ? 36 : 24;
-var t_ext = round(thrust_anim * 14); // extra length during thrust
-var t_off = thrust_anim * 5;         // base shifts forward during lunge
+var t_ext = 0; // no thrust animation in grid mode
+var t_off = 0;
 draw_set_color(flash ? c_white : (two_hand_active ? make_color_rgb(255, 160, 40) : make_color_rgb(205, 215, 230)));
 draw_line_width(x + aim_dx * t_off + aim_dy * 3, y + aim_dy * t_off - aim_dx * 3,
                 x + aim_dx * (sw_len + t_ext) + aim_dy * 3, y + aim_dy * (sw_len + t_ext) - aim_dx * 3, 4);

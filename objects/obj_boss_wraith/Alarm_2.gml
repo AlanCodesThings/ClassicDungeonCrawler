@@ -1,3 +1,2 @@
-// Phase 2: periodic invisibility
-invis_timer = 180;
-alarm[2] = 250;
+﻿// Retired — boss AI moved to scr_grid.gml
+

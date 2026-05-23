@@ -1,4 +1,4 @@
-var bob_y = sin(bob_timer * 0.1) * 4;
+var bob_y = sin(current_time * 0.003 + x * 0.05) * 4;
 switch (pickup_type) {
     case 0: draw_set_color(make_color_rgb(220, 50, 50));  break;
     case 1: draw_set_color(c_orange);                     break;

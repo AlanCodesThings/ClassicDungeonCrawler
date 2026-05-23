@@ -1,83 +1,117 @@
-event_inherited();
+event_inherited(); // visual lerp, timers, stairs
 if (is_dead) exit;
 
-// Shield — only when not mid-windup
-shield_active = (mouse_check_button(mb_right) && !two_hand_active && basic_atk_windup <= 0);
+// E — charge attack (real-time hold, fires as a turn action on release)
+if (keyboard_check(ord("E")) && ability_dmg_cd <= 0) {
+	charge_timer = min(charge_timer + 1, 180);
+	exit; // lock movement while charging
+}
+if (keyboard_check_released(ord("E")) && ability_dmg_cd <= 0 && charge_timer > 0) {
+	var lvl  = charge_timer div 30; // 0–6
+	var snap = grid_snap_dir_8(aim_dx, aim_dy);
+	var adx  = snap.dx; var ady = snap.dy;
+	// Line of 1+lvl tiles
+	var cells = grid_line_cells(grid_x, grid_y, adx, ady, 1 + lvl);
+	for (var _i = 0; _i < array_length(cells); _i++) {
+		player_grid_attack(cells[_i].gx, cells[_i].gy, round(damage * (1 + lvl)), crit_chance, crit_mult);
+	}
+	// AoE at end tile
+	if (array_length(cells) > 0) {
+		var last = cells[array_length(cells) - 1];
+		var rad  = 1 + lvl div 2;
+		for (var _dy = -rad; _dy <= rad; _dy++) {
+			for (var _dx2 = -rad; _dx2 <= rad; _dx2++) {
+				if (abs(_dx2) + abs(_dy) <= rad)
+					player_grid_attack(last.gx + _dx2, last.gy + _dy, round(damage * (1 + lvl)), crit_chance, crit_mult);
+			}
+		}
+	}
+	charge_timer    = 0;
+	ability_dmg_cd  = ability_dmg_max;
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
+}
+if (!keyboard_check(ord("E"))) charge_timer = 0;
 
-// 2H timer
-if (two_hand_active) {
-	two_hand_timer--;
-	if (two_hand_timer <= 0) two_hand_active = false;
-	riposte_ready = mouse_check_button(mb_right);
+// Guard against input during animation
+if (move_anim_timer > 0) exit;
+
+// Q — 2H sword ultimate
+if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
+	two_hand_active      = true;
+	two_hand_turns_left  = 10;
+	ability_ult_cd       = ability_ult_max;
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
 }
 
-// SPACE — shuffle dash (blocked during attack commitment)
-if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0 && attack_lock <= 0) {
-	var ix = (keyboard_check(ord("D"))||keyboard_check(vk_right)) - (keyboard_check(ord("A"))||keyboard_check(vk_left));
-	var iy = (keyboard_check(ord("S"))||keyboard_check(vk_down))  - (keyboard_check(ord("W"))||keyboard_check(vk_up));
-	if (ix == 0 && iy == 0) { ix = round(aim_dx); iy = round(aim_dy); }
-	var vlen = sqrt(ix*ix + iy*iy); if (vlen > 0) { ix /= vlen; iy /= vlen; }
-	dash_dx = ix; dash_dy = iy; dash_speed = 7; dash_timer = 8; invincible_timer = 8;
-	ability_dash_cd = ability_dash_max;
+// RMB — raise shield (blocks this turn's telegraph/enemy damage)
+if (mouse_check_button(mb_right) && !two_hand_active) {
+	shield_active = true;
+}
+// RMB in 2H mode — declare riposte
+if (mouse_check_button_pressed(mb_right) && two_hand_active) {
+	riposte_declared = true;
 }
 
-// Windup tick — fire at end of windup, then recovery holds the lock
-if (basic_atk_windup > 0) {
-	basic_atk_windup--;
-	if (basic_atk_windup == 0) {
-		if (!two_hand_active) {
-			var hit = instance_create_layer(x + locked_aim_dx*36, y + locked_aim_dy*36, "Instances", obj_hitbox);
-			hit.owner_ref = id; hit.dmg = damage; hit.hw = 22; hit.hh = 22;
-			hit.life = 8; hit.max_life = 8; hit.is_player = true;
-			hit.aim_dx = locked_aim_dx; hit.aim_dy = locked_aim_dy;
-		} else {
-			var cx = x + locked_aim_dx * 50, cy = y + locked_aim_dy * 50;
-			with (obj_enemy) { if (point_distance(x,y,cx,cy) < 85) deal_damage(id, cx, cy, other.damage*3, other.crit_chance, other.crit_mult, 8); }
-			with (obj_boss)  { if (point_distance(x,y,cx,cy) < 85) deal_damage(id, cx, cy, other.damage*3, other.crit_chance, other.crit_mult, 4); }
+// SPACE — shuffle (move 2 tiles, 1-turn invincibility)
+if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
+	var _ix = (keyboard_check(ord("D"))||keyboard_check(vk_right)) - (keyboard_check(ord("A"))||keyboard_check(vk_left));
+	var _iy = (keyboard_check(ord("S"))||keyboard_check(vk_down))  - (keyboard_check(ord("W"))||keyboard_check(vk_up));
+	if (_ix == 0 && _iy == 0) { _ix = round(aim_dx); _iy = round(aim_dy); }
+	if (_ix != 0 || _iy != 0) {
+		if (_ix != 0 && _iy != 0) _iy = 0;
+		// Attempt to move 2 tiles
+		var moved = false;
+		if (try_move_player(_ix, _iy)) {
+			moved = true;
+			try_move_player(_ix, _iy); // second step
+		}
+		if (moved) {
+			invincible_turns = 1;
+			ability_dash_cd  = ability_dash_max;
+			process_turn();
+			move_anim_timer  = MOVE_ANIM_DELAY;
+			exit;
 		}
 	}
 }
 
-// Thrust animation lerp
-if (basic_atk_windup > 0) {
-	thrust_anim = lerp(thrust_anim, 1.0, 0.3);
-} else if (attack_lock > 0) {
-	thrust_anim = lerp(thrust_anim, 0.0, 0.18);
-} else {
-	thrust_anim = lerp(thrust_anim, 0.0, 0.28);
-}
-
-// LMB — begin windup (blocked during recovery or existing windup)
-if (mouse_check_button_pressed(mb_left) && basic_atk_windup <= 0 && attack_lock <= 0) {
-	locked_aim_dx = aim_dx; locked_aim_dy = aim_dy;
-	var windup   = max(1, round(10 / attack_speed));
-	var recovery = max(1, round(10 / attack_speed));
-	if (two_hand_active) {
-		windup   = max(1, round(14 / attack_speed));
-		recovery = max(1, round(12 / attack_speed));
+// LMB — basic attack: 3-tile arc (5-tile arc in 2H mode)
+if (mouse_check_button_pressed(mb_left)) {
+	var snap = grid_snap_dir_8(aim_dx, aim_dy);
+	var adx  = snap.dx; var ady = snap.dy;
+	var ang  = point_direction(0, 0, adx, ady);
+	if (!two_hand_active) {
+		// Normal: 3-tile arc (center ±45°)
+		var d0  = grid_snap_dir_8(lengthdir_x(1, ang),      lengthdir_y(1, ang));
+		var d1  = grid_snap_dir_8(lengthdir_x(1, ang - 45), lengthdir_y(1, ang - 45));
+		var d2  = grid_snap_dir_8(lengthdir_x(1, ang + 45), lengthdir_y(1, ang + 45));
+		player_grid_attack(grid_x + d0.dx, grid_y + d0.dy, damage, crit_chance, crit_mult);
+		player_grid_attack(grid_x + d1.dx, grid_y + d1.dy, damage, crit_chance, crit_mult);
+		player_grid_attack(grid_x + d2.dx, grid_y + d2.dy, damage, crit_chance, crit_mult);
+	} else {
+		// 2H mode: 5-tile wide arc (center ±0 ±45 ±90)
+		for (var _a = -90; _a <= 90; _a += 45) {
+			var _d = grid_snap_dir_8(lengthdir_x(1, ang + _a), lengthdir_y(1, ang + _a));
+			player_grid_attack(grid_x + _d.dx, grid_y + _d.dy, round(damage * 3), crit_chance, crit_mult);
+		}
 	}
-	basic_atk_windup = windup;
-	attack_lock = windup + recovery;
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
 }
 
-// E — charge attack: stationary while held, brief recovery on release
-if (keyboard_check(ord("E")) && ability_dmg_cd <= 0 && attack_lock <= 0) {
-	charge_timer = min(charge_timer + 1, 180);
-	attack_lock = max(attack_lock, 2); // keep movement locked each frame while charging
-}
-if (keyboard_check_released(ord("E")) && ability_dmg_cd <= 0 && charge_timer > 0) {
-	var lvl = charge_timer div 30;
-	var cx = x + aim_dx * 40, cy = y + aim_dy * 40;
-	var rad = 40 + lvl * 15;
-	with (obj_enemy) { if (point_distance(x,y,cx,cy) < rad) deal_damage(id, cx, cy, other.damage*(1+lvl), other.crit_chance, other.crit_mult, 6); }
-	with (obj_boss)  { if (point_distance(x,y,cx,cy) < rad) deal_damage(id, cx, cy, other.damage*(1+lvl), other.crit_chance, other.crit_mult, 3); }
-	ability_dmg_cd = ability_dmg_max;
-	charge_timer = 0;
-	attack_lock = max(attack_lock, max(1, round(14 / attack_speed)));
-}
-if (!keyboard_check(ord("E"))) charge_timer = 0;
-
-// Q — 2H sword ultimate
-if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
-	two_hand_active = true; two_hand_timer = 600; ability_ult_cd = ability_ult_max;
+// WASD movement
+var _ix = (keyboard_check_pressed(ord("D"))||keyboard_check_pressed(vk_right)) - (keyboard_check_pressed(ord("A"))||keyboard_check_pressed(vk_left));
+var _iy = (keyboard_check_pressed(ord("S"))||keyboard_check_pressed(vk_down))  - (keyboard_check_pressed(ord("W"))||keyboard_check_pressed(vk_up));
+if (_ix != 0 || _iy != 0) {
+	if (_ix != 0 && _iy != 0) _iy = 0;
+	if (try_move_player(_ix, _iy)) {
+		process_turn();
+		move_anim_timer = MOVE_ANIM_DELAY;
+	}
+	exit;
 }

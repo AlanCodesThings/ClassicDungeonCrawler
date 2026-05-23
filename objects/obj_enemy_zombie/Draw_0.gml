@@ -46,11 +46,4 @@ if (!flash) {
     draw_line_width(x - 5, y - 9, x + 6, y - 8, 2); // mouth gash
 }
 
-// -- Pin indicator --
-if (pin_timer > 0) {
-    draw_set_color(make_color_rgb(80, 200, 255));
-    draw_set_alpha(0.55);
-    draw_rectangle(x - 16, y - 27, x + 16, y + 18, true);
-    draw_set_alpha(1.0);
-}
 draw_health_bar(x - 14, y - 32, 28, 5, hp, max_hp, make_color_rgb(60,0,0), c_lime);

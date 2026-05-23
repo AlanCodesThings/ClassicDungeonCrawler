@@ -91,15 +91,15 @@ if (cls == "Warrior") {
 
 // Active state (slot lights up when ability is in-use)
 var slot_active = [false, false, false, false, false];
-if (variable_instance_exists(p, "attack_lock")    && p.attack_lock > 0)    slot_active[0] = true;
-if (variable_instance_exists(p, "dash_timer")     && p.dash_timer > 0)     slot_active[1] = true;
-if (variable_instance_exists(p, "invisible")      && p.invisible)           slot_active[1] = true;
-if (variable_instance_exists(p, "shield_active")  && p.shield_active)       slot_active[2] = true;
-if (variable_instance_exists(p, "charge_timer")   && p.charge_timer > 0)   slot_active[3] = true;
-if (variable_instance_exists(p, "flurry_active")  && p.flurry_active)       slot_active[3] = true;
-if (variable_instance_exists(p, "charging")       && p.charging)            slot_active[3] = true;
-if (variable_instance_exists(p, "two_hand_active") && p.two_hand_active)    slot_active[4] = true;
-if (p.ult_active)                                                            slot_active[4] = true;
+if (p.move_anim_timer > 0)                                                   slot_active[0] = true;
+if (variable_instance_exists(p, "invisible")       && p.invisible)           slot_active[1] = true;
+if (variable_instance_exists(p, "vanish_turns")    && p.vanish_turns > 0)   slot_active[1] = true;
+if (variable_instance_exists(p, "shield_active")   && p.shield_active)       slot_active[2] = true;
+if (variable_instance_exists(p, "charge_timer")    && p.charge_timer > 0)   slot_active[3] = true;
+if (variable_instance_exists(p, "charging")        && p.charging)            slot_active[3] = true;
+if (variable_instance_exists(p, "two_hand_active") && p.two_hand_active)     slot_active[4] = true;
+if (variable_instance_exists(p, "ult_turns_left")  && p.ult_turns_left > 0) slot_active[4] = true;
+if (p.ult_active)                                                             slot_active[4] = true;
 
 for (var i = 0; i < n_slots; i++) {
     var sx  = bar_x + i * (slot_sz + slot_gap);
@@ -251,11 +251,11 @@ for (var i = 0; i < n_slots; i++) {
         draw_set_alpha(0.74);
         draw_rectangle(sx + 1, sy + 1, sx + slot_sz - 1, sy + 1 + cd_h, false);
         draw_set_alpha(1.0);
-        // Seconds remaining (only when > 1 second left)
-        if (cd > 60) {
+        // Turn count display
+        if (cd > 0) {
             draw_set_color(c_white);
             draw_set_halign(fa_center); draw_set_valign(fa_middle);
-            draw_text(sx + slot_sz / 2, sy + slot_sz / 2, string(ceil(cd / 60)) + "s");
+            draw_text(sx + slot_sz / 2, sy + slot_sz / 2, string(cd) + "T");
         }
     }
 

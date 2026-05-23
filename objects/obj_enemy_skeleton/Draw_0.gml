@@ -53,11 +53,4 @@ if (instance_exists(global.player_inst)) {
                     x + lengthdir_x(4, ang - 90), y + lengthdir_y(4, ang - 90), 2);
 }
 
-// -- Pin indicator --
-if (pin_timer > 0) {
-    draw_set_color(make_color_rgb(80, 200, 255));
-    draw_set_alpha(0.55);
-    draw_rectangle(x - 12, y - 22, x + 12, y + 14, true);
-    draw_set_alpha(1.0);
-}
 draw_health_bar(x - 11, y - 28, 22, 5, hp, max_hp, make_color_rgb(60,0,0), c_lime);

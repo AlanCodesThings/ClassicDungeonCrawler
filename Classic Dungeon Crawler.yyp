@@ -52,6 +52,7 @@
     {"id":{"name":"rm_game","path":"rooms/rm_game/rm_game.yy",},},
     {"id":{"name":"rm_init","path":"rooms/rm_init/rm_init.yy",},},
     {"id":{"name":"scr_combat","path":"scripts/scr_combat/scr_combat.yy",},},
+    {"id":{"name":"scr_grid","path":"scripts/scr_grid/scr_grid.yy",},},
     {"id":{"name":"scr_draw_utils","path":"scripts/scr_draw_utils/scr_draw_utils.yy",},},
     {"id":{"name":"scr_dungeon_gen","path":"scripts/scr_dungeon_gen/scr_dungeon_gen.yy",},},
   ],

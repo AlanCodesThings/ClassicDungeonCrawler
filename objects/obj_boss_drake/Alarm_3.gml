@@ -1,1 +1,2 @@
-charge_active = false;
+﻿// Retired — boss AI moved to scr_grid.gml
+

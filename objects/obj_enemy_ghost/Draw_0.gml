@@ -1,10 +1,10 @@
 var flash = (hit_flash > 5);
-var al    = (phase_timer > 0) ? 0.3 : 0.8;
+var al    = phase_mode ? 0.3 : 0.8;
 var bob   = sin(current_time * 0.010 + x * 0.01 + y * 0.01) * 4;
 draw_set_alpha(al);
 
 // -- Glow aura (phase mode) --
-if (phase_timer > 0 && !flash) {
+if (phase_mode && !flash) {
     draw_set_color(make_color_rgb(80, 80, 220));
     draw_set_alpha(al * 0.5);
     draw_circle(x, y + bob, col_half_w + 8, true);
@@ -40,11 +40,4 @@ if (!flash) {
 
 draw_set_alpha(1.0);
 
-// -- Pin indicator --
-if (pin_timer > 0) {
-    draw_set_color(make_color_rgb(80, 200, 255));
-    draw_set_alpha(0.55);
-    draw_circle(x, y + bob, col_half_w + 4, true);
-    draw_set_alpha(1.0);
-}
 draw_health_bar(x - col_half_w, y - col_half_h - 8 + bob, col_half_w * 2, 4, hp, max_hp, make_color_rgb(60,0,0), c_lime);

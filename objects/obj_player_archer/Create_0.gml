@@ -1,10 +1,16 @@
 event_inherited();
-hp = 110; max_hp = 110; damage = 22; move_speed = 3.5; armor = 0.0;
+hp = 110; max_hp = 110;
+damage = 22;
+armor  = 0.0;
+crit_chance = 0.15; crit_mult = 2.0;
 col_half_w = 11; col_half_h = 11;
-charging = false; charge_timer = 0;
-arrow_delay = 0;
+// Ability cooldowns (in turns)
+ability_dash_max = 3;   // dodge + pin
+ability_util_max = 0;   // no utility
+ability_dmg_max  = 5;   // charge/power shot
+ability_ult_max  = 18;  // enchanted quiver
+// Archer state
+charge_timer  = 0;
+charging      = false;
 pin_shot_ready = false;
-ability_dash_max = 180;  // 3s pin dodge
-ability_util_max = 0;    // no utility ability
-ability_dmg_max  = 300;  // 5s power shot
-ability_ult_max  = 1080; // 18s enchanted quiver (lasts 10s)
+ult_turns_left = 0;

@@ -58,11 +58,4 @@ if (!flash) {
     draw_triangle(x + 2, y + 2 + body_bob, x + 3, y + 6 + body_bob, x + 1, y + 2 + body_bob, false);
 }
 
-// -- Pin indicator --
-if (pin_timer > 0) {
-    draw_set_color(make_color_rgb(80, 200, 255));
-    draw_set_alpha(0.55);
-    draw_circle(x, y + body_bob, col_half_w + 4, true);
-    draw_set_alpha(1.0);
-}
 draw_health_bar(x - col_half_w, y - col_half_w - 14, col_half_w * 2, 4, hp, max_hp, make_color_rgb(60,0,0), c_lime);

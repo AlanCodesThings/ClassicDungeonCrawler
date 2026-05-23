@@ -1,105 +1,114 @@
 event_inherited();
 if (is_dead) exit;
+if (move_anim_timer > 0) exit;
 
-// Invisibility tick
-if (invis_timer > 0) {
-	invis_timer--;
-	if (invis_timer <= 0) { invisible = false; invis_first_attack = false; speed_mult = 1.0; }
-}
-
-// SPACE — vanish (blocked during attack commitment)
-if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0 && attack_lock <= 0) {
-	invisible = true; invis_timer = 240; invis_first_attack = true;
-	speed_mult = 1.7; invincible_timer = 240; ability_dash_cd = ability_dash_max;
-}
-
-// Windup tick — fire at end of windup
-if (basic_atk_windup > 0) {
-	basic_atk_windup--;
-	if (basic_atk_windup == 0) {
-		if (invisible) {
-			invisible = false; invis_timer = 0; speed_mult = 1.0; invincible_timer = 0;
-			var hx = x + locked_aim_dx * 30, hy = y + locked_aim_dy * 30;
-			with (obj_enemy) {
-				if (rect_overlap(x,y,col_half_w,col_half_h,hx,hy,22,22))
-					deal_damage(id, hx, hy, other.damage, 1.0, other.crit_mult, 6);
-			}
-			with (obj_boss) {
-				if (rect_overlap(x,y,col_half_w,col_half_h,hx,hy,22,22))
-					deal_damage(id, hx, hy, other.damage, 1.0, other.crit_mult, 3);
-			}
-			invis_first_attack = false;
-		} else {
-			var h1 = instance_create_layer(x+locked_aim_dx*28+locked_aim_dy*8, y+locked_aim_dy*28-locked_aim_dx*8, "Instances", obj_hitbox);
-			h1.owner_ref=id; h1.dmg=damage; h1.hw=14; h1.hh=14;
-			h1.life=3; h1.max_life=3; h1.is_player=true;
-			h1.aim_dx=locked_aim_dx; h1.aim_dy=locked_aim_dy;
-			var h2 = instance_create_layer(x+locked_aim_dx*28-locked_aim_dy*8, y+locked_aim_dy*28+locked_aim_dx*8, "Instances", obj_hitbox);
-			h2.owner_ref=id; h2.dmg=damage; h2.hw=14; h2.hh=14;
-			h2.life=3; h2.max_life=3; h2.is_player=true;
-			h2.aim_dx=locked_aim_dx; h2.aim_dy=locked_aim_dy;
-		}
-	}
-}
-
-// LMB — begin windup (faster and critting from invis)
-if (mouse_check_button_pressed(mb_left) && basic_atk_windup <= 0 && attack_lock <= 0 && !flurry_active) {
-	locked_aim_dx = aim_dx; locked_aim_dy = aim_dy;
-	var windup   = 0;
-	var recovery = 0;
-	if (invisible) {
-		windup   = max(1, round(4 / attack_speed));
-		recovery = max(1, round(6 / attack_speed));
-	} else {
-		windup   = max(1, round(6 / attack_speed));
-		recovery = max(1, round(8 / attack_speed));
-	}
-	basic_atk_windup = windup;
-	attack_lock = windup + recovery;
-}
-
-// RMB — smoke bomb
-if (mouse_check_button_pressed(mb_right) && ability_util_cd <= 0) {
-	smoke_inst = instance_create_layer(x, y, "Instances", obj_smoke_bomb);
-	smoke_inst.owner_ref = id;
-	ability_util_cd = ability_util_max;
-}
-
-// E — flurry (movement locked for full sequence + recovery)
-if (keyboard_check_pressed(ord("E")) && ability_dmg_cd <= 0 && !flurry_active && attack_lock <= 0) {
-	flurry_active = true; flurry_hits = 0; flurry_step = 0;
-	ability_dmg_cd = ability_dmg_max;
-	attack_lock = max(1, round(42 / attack_speed)); // 36 frames sequence + 6 recovery
-}
-if (flurry_active) {
-	flurry_step++;
-	if (flurry_step mod 6 == 0 && flurry_hits < 6) {
-		var fc = 0.1 + flurry_hits * 0.15;
-		var h = instance_create_layer(x + aim_dx*28, y + aim_dy*28, "Instances", obj_hitbox);
-		h.owner_ref = id; h.dmg = damage; h.hw = 17; h.hh = 17;
-		h.life = 2; h.max_life = 2; h.is_player = true;
-		h.aim_dx = aim_dx; h.aim_dy = aim_dy;
-		h.crit_override = fc; h.crit_mult_override = crit_mult;
-		flurry_hits++;
-	}
-	if (flurry_hits >= 6) { flurry_active = false; flurry_step = 0; }
-}
-
-// Q — shadowstep with recovery after (so you can't immediately vanish)
-if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0 && attack_lock <= 0) {
+// Q — shadowstep: teleport adjacent to nearest enemy, hit 20 times
+if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
 	var target = noone; var best = 99999;
-	with (obj_enemy) { var d=point_distance(x,y,mouse_x,mouse_y); if(d<best){best=d;target=id;} }
-	with (obj_boss)  { var d=point_distance(x,y,mouse_x,mouse_y); if(d<best){best=d;target=id;} }
+	with (obj_enemy) { var _d = point_distance(x, y, mouse_x, mouse_y); if (_d < best) { best = _d; target = id; } }
+	with (obj_boss)  { var _d = point_distance(x, y, mouse_x, mouse_y); if (_d < best) { best = _d; target = id; } }
 	if (instance_exists(target)) {
-		var ang = point_direction(target.x, target.y, x, y);
-		x = target.x + lengthdir_x(50, ang);
-		y = target.y + lengthdir_y(50, ang);
-		repeat (20) {
-			if (!instance_exists(target)) break;
-			target.invincible_timer = 0;
-			deal_damage(target, x, y, damage, crit_chance, crit_mult, 1);
+		var _dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+		var _found = false;
+		for (var _i = 0; _i < 4; _i++) {
+			var _ngx = target.grid_x + _dirs[_i][0];
+			var _ngy = target.grid_y + _dirs[_i][1];
+			if (grid_is_walkable(_ngx, _ngy) && !grid_cell_occupied(_ngx, _ngy)) {
+				grid_x = _ngx; grid_y = _ngy;
+				x = grid_x * TILE_SIZE + TILE_SIZE / 2;
+				y = grid_y * TILE_SIZE + TILE_SIZE / 2;
+				_found = true;
+				break;
+			}
 		}
-		ability_ult_cd = ability_ult_max;
-		attack_lock = max(1, round(14 / attack_speed));
+		if (_found) {
+			repeat (20) {
+				if (!instance_exists(target)) break;
+				target.invincible_timer = 0;
+				deal_damage(target, x, y, damage, crit_chance, crit_mult, 0);
+			}
+			ability_ult_cd  = ability_ult_max;
+			process_turn();
+			move_anim_timer = MOVE_ANIM_DELAY;
+			exit;
+		}
 	}
+}
+
+// SPACE — vanish
+if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
+	invisible    = true;
+	vanish_turns = 4;
+	invincible_turns = 1;
+	ability_dash_cd  = ability_dash_max * 2; // 8-turn CD
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
+}
+
+// RMB — smoke bomb (place 3×3 smoke zone for 4 turns)
+if (mouse_check_button_pressed(mb_right) && ability_util_cd <= 0) {
+	for (var _sy = -1; _sy <= 1; _sy++) {
+		for (var _sx = -1; _sx <= 1; _sx++) {
+			array_push(global.smoke_tiles, { gx: grid_x + _sx, gy: grid_y + _sy, turns_left: 4 });
+		}
+	}
+	smoke_active    = true;
+	instance_create_layer(x, y, "Instances", obj_smoke_bomb);
+	ability_util_cd = ability_util_max;
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
+}
+
+// E — flurry (6 hits on aim tile, escalating crit chance)
+if (keyboard_check_pressed(ord("E")) && ability_dmg_cd <= 0) {
+	var snap = grid_snap_dir_8(aim_dx, aim_dy);
+	var tx   = grid_x + snap.dx;
+	var ty   = grid_y + snap.dy;
+	for (var _i = 0; _i < 6; _i++) {
+		var fc = 0.1 + _i * 0.15;
+		player_grid_attack(tx, ty, damage, fc, crit_mult);
+	}
+	ability_dmg_cd  = ability_dmg_max;
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
+}
+
+// LMB — dual stab (aim tile + perpendicular flank); auto-crit + end vanish if invisible
+if (mouse_check_button_pressed(mb_left)) {
+	var snap = grid_snap_dir_8(aim_dx, aim_dy);
+	var tx   = grid_x + snap.dx;
+	var ty   = grid_y + snap.dy;
+	var cc   = crit_chance;
+	var cm   = crit_mult;
+	if (invisible) {
+		cc = 1.0;
+		invisible    = false;
+		vanish_turns = 0;
+	}
+	player_grid_attack(tx, ty, damage, cc, cm);
+	// Perpendicular tile (rotate snap 90°)
+	player_grid_attack(grid_x + (-snap.dy), grid_y + snap.dx, damage, cc, cm);
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
+}
+
+// WASD movement (2 tiles if vanished)
+var _ix = (keyboard_check_pressed(ord("D"))||keyboard_check_pressed(vk_right)) - (keyboard_check_pressed(ord("A"))||keyboard_check_pressed(vk_left));
+var _iy = (keyboard_check_pressed(ord("S"))||keyboard_check_pressed(vk_down))  - (keyboard_check_pressed(ord("W"))||keyboard_check_pressed(vk_up));
+if (_ix != 0 || _iy != 0) {
+	if (_ix != 0 && _iy != 0) _iy = 0;
+	var moved = try_move_player(_ix, _iy);
+	if (moved && invisible) {
+		// Vanished: attempt second step
+		try_move_player(_ix, _iy);
+	}
+	if (moved) {
+		process_turn();
+		move_anim_timer = MOVE_ANIM_DELAY;
+	}
+	exit;
 }
