@@ -1,4 +1,4 @@
-hp = 30; max_hp = 30;
+hp = 15; max_hp = 15;
 damage = 8; armor = 0.0;
 col_half_w = 12; col_half_h = 12;
 invincible_timer = 0; hit_flash = 0;
@@ -17,6 +17,8 @@ alt_turn       = false;
 last_known_pgx = 0;
 last_known_pgy = 0;
 is_dead        = false;
+is_aggroed     = false;
+aggro_radius   = 8;
 depth          = 0;
 // Scale with floor depth
 var f = global.floor_number;

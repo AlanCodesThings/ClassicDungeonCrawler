@@ -1,6 +1,21 @@
 event_inherited(); // visual lerp, timers, stairs
 if (is_dead) exit;
 
+// Charge slam animation timer
+if (charge_slam_timer > 0) charge_slam_timer--;
+
+// Sword swing trail — record tip path during attack animation
+if (thrust_timer > 0) {
+	var _sw = two_hand_active ? 36 : 24;
+	var _t  = 1 - (thrust_timer - 1) / 12.0;
+	thrust_timer--;
+	var _ca = swing_ang - swing_half + swing_half * 2 * _t;
+	array_push(sword_trail, { tx: x + lengthdir_x(_sw, _ca), ty: y + lengthdir_y(_sw, _ca) });
+	if (array_length(sword_trail) > 14) array_delete(sword_trail, 0, 1);
+} else if (array_length(sword_trail) > 0) {
+	array_delete(sword_trail, 0, 1); // dissolve trail one point per frame
+}
+
 // 2H mode — decrement timer each frame
 if (two_hand_active) {
 	two_hand_timer--;
@@ -11,32 +26,39 @@ if (two_hand_active) {
 shield_active    = mouse_check_button(mb_right) && !two_hand_active;
 riposte_declared = mouse_check_button(mb_right) && two_hand_active;
 
-// E — charge attack (hold to charge, fires on release; blocks movement while charging)
+// E — charge attack: 3 levels (lvl1≥20f 2×dmg 2-deep, lvl2≥50f 3.5×dmg 3-deep, lvl3≥90f 5.5×dmg 4-deep)
+// Cone width expands: depth d has 2d-1 tiles wide centred on aim axis
 if (keyboard_check(ord("E")) && ability_dmg_cd <= 0) {
-	charge_timer = min(charge_timer + 1, 180);
-	exit; // lock movement while charging
+	charge_timer = min(charge_timer + 1, 120);
+	exit;
 }
 if (keyboard_check_released(ord("E")) && ability_dmg_cd <= 0 && charge_timer > 0) {
-	var lvl  = charge_timer div 30; // 0–6
-	var snap = grid_snap_dir_8(aim_dx, aim_dy);
-	var adx  = snap.dx; var ady = snap.dy;
-	var cells = grid_line_cells(grid_x, grid_y, adx, ady, 1 + lvl);
-	for (var _i = 0; _i < array_length(cells); _i++) {
-		player_grid_attack(cells[_i].gx, cells[_i].gy, round(damage * (1 + lvl)), crit_chance, crit_mult);
-	}
-	if (array_length(cells) > 0) {
-		var last = cells[array_length(cells) - 1];
-		var rad  = 1 + lvl div 2;
-		for (var _dy = -rad; _dy <= rad; _dy++) {
-			for (var _dx2 = -rad; _dx2 <= rad; _dx2++) {
-				if (abs(_dx2) + abs(_dy) <= rad)
-					player_grid_attack(last.gx + _dx2, last.gy + _dy, round(damage * (1 + lvl)), crit_chance, crit_mult);
+	var lvl = (charge_timer >= 90) ? 3 : ((charge_timer >= 50) ? 2 : ((charge_timer >= 20) ? 1 : 0));
+	if (lvl > 0) {
+		var snap      = grid_snap_dir_8(aim_dx, aim_dy);
+		var adx       = snap.dx; var ady = snap.dy;
+		var pdx       = -ady;    var pdy = adx;
+		var max_depth = lvl + 1;
+		var dmg_mult  = (lvl == 1) ? 2.0 : ((lvl == 2) ? 3.5 : 5.5);
+		for (var _d = 1; _d <= max_depth; _d++) {
+			for (var _p = -(_d - 1); _p <= (_d - 1); _p++) {
+				player_grid_attack(grid_x + adx * _d + pdx * _p,
+				                   grid_y + ady * _d + pdy * _p,
+				                   round(damage * dmg_mult), crit_chance, crit_mult);
 			}
 		}
+		charge_slam_timer = 20;
+		charge_slam_lvl   = lvl;
+		charge_slam_dx    = adx;
+		charge_slam_dy    = ady;
+		sword_trail  = [];
+		thrust_timer = 12;
+		swing_ang    = point_direction(0, 0, adx, ady);
+		swing_half   = 60 + lvl * 15; // 75° / 90° / 105° per level
+		ability_dmg_cd = ability_dmg_max;
+		move_cd = 6;
 	}
-	charge_timer   = 0;
-	ability_dmg_cd = ability_dmg_max;
-	move_cd = 6;
+	charge_timer = 0;
 	exit;
 }
 if (!keyboard_check(ord("E"))) charge_timer = 0;
@@ -72,7 +94,7 @@ if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
 }
 
 // LMB — basic attack (3-tile arc; 5-tile arc in 2H mode)
-if (mouse_check_button_pressed(mb_left)) {
+if (mouse_check_button_pressed(mb_left) && attack_cd <= 0) {
 	var snap = grid_snap_dir_8(aim_dx, aim_dy);
 	var adx  = snap.dx; var ady = snap.dy;
 	var ang  = point_direction(0, 0, adx, ady);
@@ -89,7 +111,12 @@ if (mouse_check_button_pressed(mb_left)) {
 			player_grid_attack(grid_x + _d.dx, grid_y + _d.dy, round(damage * 3), crit_chance, crit_mult);
 		}
 	}
-	move_cd = 6;
+	sword_trail  = [];
+	thrust_timer = 12;
+	swing_ang    = point_direction(0, 0, aim_dx, aim_dy);
+	swing_half   = two_hand_active ? 90 : 60;
+	attack_cd = two_hand_active ? 25 : 18;
+	move_cd   = 6;
 	exit;
 }
 

@@ -32,20 +32,55 @@ if (!flash) {
     draw_circle(x + 2, y - 14, 1, false);
 }
 
-// -- Daggers --
+// -- Daggers (stab animation) --
+// Extension: 0 → peak → 0 over thrust_timer lifetime using sine
+var _stabbing = (thrust_timer > 0);
+var _ext = _stabbing ? sin((1 - thrust_timer / 10.0) * pi) * 18 : 0;
+var _perp_x = _stabbing ? swing_ady  : aim_dy;
+var _perp_y = _stabbing ? -swing_adx : -aim_dx;
+var _adx_a  = _stabbing ? lengthdir_x(1, swing_ang_a) : aim_dx;
+var _ady_a  = _stabbing ? lengthdir_y(1, swing_ang_a) : aim_dy;
+var _adx_b  = _stabbing ? lengthdir_x(1, swing_ang_b) : aim_dx;
+var _ady_b  = _stabbing ? lengthdir_y(1, swing_ang_b) : aim_dy;
+var _len    = 20 + _ext;
+
+// Stab speed-streaks (additive, behind blades)
+if (!flash && _stabbing && _ext > 1) {
+    var _streak = _ext * 1.3;
+    var _sal    = _ext / 18.0;
+    var _tax = x + _perp_x * 7 + _adx_a * _len;
+    var _tay = y + _perp_y * 7 + _ady_a * _len;
+    var _tbx = x - _perp_x * 7 + _adx_b * _len;
+    var _tby = y - _perp_y * 7 + _ady_b * _len;
+    gpu_set_blendmode(bm_add);
+    draw_set_color(make_color_rgb(180, 40, 230));
+    draw_set_alpha(_sal * 0.45);
+    draw_line_width(_tax, _tay, _tax - _adx_a * _streak, _tay - _ady_a * _streak, 9);
+    draw_line_width(_tbx, _tby, _tbx - _adx_b * _streak, _tby - _ady_b * _streak, 9);
+    draw_set_color(make_color_rgb(230, 170, 255));
+    draw_set_alpha(_sal * 0.9);
+    draw_line_width(_tax, _tay, _tax - _adx_a * _streak, _tay - _ady_a * _streak, 2);
+    draw_line_width(_tbx, _tby, _tbx - _adx_b * _streak, _tby - _ady_b * _streak, 2);
+    gpu_set_blendmode(bm_normal);
+    draw_set_alpha(invisible ? 0.22 : 1.0);
+}
+
+// Blade A
 draw_set_color(flash ? c_white : make_color_rgb(200, 210, 230));
-draw_line_width(x + aim_dx * 4 + aim_dy * 7,  y + aim_dy * 4 - aim_dx * 7,
-               x + aim_dx * 22 + aim_dy * 7, y + aim_dy * 22 - aim_dx * 7, 2);
-draw_line_width(x + aim_dx * 4 - aim_dy * 7,  y + aim_dy * 4 + aim_dx * 7,
-               x + aim_dx * 22 - aim_dy * 7, y + aim_dy * 22 + aim_dx * 7, 2);
+draw_line_width(x + _perp_x * 7 + _adx_a * 4, y + _perp_y * 7 + _ady_a * 4,
+                x + _perp_x * 7 + _adx_a * _len, y + _perp_y * 7 + _ady_a * _len, 2);
+// Blade B
+draw_line_width(x - _perp_x * 7 + _adx_b * 4, y - _perp_y * 7 + _ady_b * 4,
+                x - _perp_x * 7 + _adx_b * _len, y - _perp_y * 7 + _ady_b * _len, 2);
+// Handles
 draw_set_color(make_color_rgb(120, 80, 40));
-draw_line_width(x + aim_dx * 4 + aim_dy * 7,  y + aim_dy * 4 - aim_dx * 7,
-               x + aim_dx * 10 + aim_dy * 7, y + aim_dy * 10 - aim_dx * 7, 3);
-draw_line_width(x + aim_dx * 4 - aim_dy * 7,  y + aim_dy * 4 + aim_dx * 7,
-               x + aim_dx * 10 - aim_dy * 7, y + aim_dy * 10 + aim_dx * 7, 3);
+draw_line_width(x + _perp_x * 7 + _adx_a * 4, y + _perp_y * 7 + _ady_a * 4,
+                x + _perp_x * 7 + _adx_a * 10, y + _perp_y * 7 + _ady_a * 10, 3);
+draw_line_width(x - _perp_x * 7 + _adx_b * 4, y - _perp_y * 7 + _ady_b * 4,
+                x - _perp_x * 7 + _adx_b * 10, y - _perp_y * 7 + _ady_b * 10, 3);
 
 // -- Flurry --
-if (flurry_active) {
+if (ability_dmg_cd > 0) {
     draw_set_alpha(0.65);
     var spin = current_time * 0.2;
     for (var fi = 0; fi < 4; fi++) {

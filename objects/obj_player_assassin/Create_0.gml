@@ -14,3 +14,9 @@ invisible      = false;
 vanish_timer   = 0;
 vanish_timer_max = 240;  // 4s duration
 smoke_active   = false;
+// Dagger stab animation
+thrust_timer = 0;
+swing_ang_a  = 0;
+swing_ang_b  = 0;
+swing_adx    = 0;
+swing_ady    = 0;

@@ -10,7 +10,9 @@ grid_y = floor(y / TILE_SIZE);
 x = grid_x * TILE_SIZE + TILE_SIZE / 2;
 y = grid_y * TILE_SIZE + TILE_SIZE / 2;
 // Movement gate — prevents moving again before lerp settles
-move_cd = 0;
+move_cd   = 0;
+attack_cd = 0;
+walk_t    = 0; // increments while visually mid-tile, drives leg animation
 // Frame-based invincibility after taking a hit
 invincible_timer = 0;
 // Aim direction (normalised, updated toward mouse each frame)
@@ -36,6 +38,11 @@ take_damage = function(dmg, sx, sy) {
 	invincible_timer = 30;
 	hit_flash = 10;
 	var _dn = instance_create_layer(x + random_range(-6, 6), y - 14, "Instances", obj_damage_number);
-	_dn.value = final_dmg; _dn.is_crit = false;
+	_dn.value            = final_dmg;
+	_dn.is_crit          = false;
+	_dn.is_player_damage = true;
+	_dn.drift_y          = -3.2;
+	_dn.timer            = 65;
+	_dn.max_timer        = 65;
 	if (hp <= 0) { hp = 0; is_dead = true; alarm[0] = 120; }
 };

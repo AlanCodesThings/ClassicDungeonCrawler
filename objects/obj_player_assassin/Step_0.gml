@@ -1,6 +1,9 @@
 event_inherited();
 if (is_dead) exit;
 
+// Dagger stab timer
+if (thrust_timer > 0) thrust_timer--;
+
 // Vanish timer
 if (invisible && vanish_timer > 0) {
 	vanish_timer--;
@@ -78,7 +81,7 @@ if (keyboard_check_pressed(ord("E")) && ability_dmg_cd <= 0) {
 }
 
 // LMB — dual stab (aim tile + perpendicular flank); auto-crit if invisible
-if (mouse_check_button_pressed(mb_left)) {
+if (mouse_check_button_pressed(mb_left) && attack_cd <= 0) {
 	var snap = grid_snap_dir_8(aim_dx, aim_dy);
 	var tx   = grid_x + snap.dx;
 	var ty   = grid_y + snap.dy;
@@ -91,7 +94,12 @@ if (mouse_check_button_pressed(mb_left)) {
 	}
 	player_grid_attack(tx, ty, damage, cc, cm);
 	player_grid_attack(grid_x + (-snap.dy), grid_y + snap.dx, damage, cc, cm);
-	move_cd = 6;
+	thrust_timer = 10;
+	swing_ang_a  = point_direction(0, 0, snap.dx, snap.dy);
+	swing_ang_b  = swing_ang_a;
+	swing_adx    = aim_dx; swing_ady = aim_dy;
+	attack_cd = 15;
+	move_cd   = 6;
 	exit;
 }
 

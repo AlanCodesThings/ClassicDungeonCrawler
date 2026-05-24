@@ -16,3 +16,13 @@ two_hand_active    = false;
 two_hand_timer     = 0;
 two_hand_timer_max = 600; // 10s
 riposte_declared   = false;
+// Sword swing trail
+thrust_timer = 0;
+swing_ang    = 0;
+swing_half   = 60;
+sword_trail  = [];
+// Charge slam animation
+charge_slam_timer = 0;
+charge_slam_lvl   = 0;
+charge_slam_dx    = 0;
+charge_slam_dy    = 0;

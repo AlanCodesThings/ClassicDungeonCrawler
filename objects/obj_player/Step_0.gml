@@ -1,17 +1,27 @@
 if (is_dead) exit;
 
 // Frame timers
-if (hit_flash       > 0) hit_flash--;
+if (hit_flash        > 0) hit_flash--;
 if (invincible_timer > 0) invincible_timer--;
-if (move_cd         > 0) move_cd--;
+if (move_cd          > 0) move_cd--;
+if (attack_cd        > 0) attack_cd--;
 if (ability_dash_cd > 0) ability_dash_cd--;
 if (ability_util_cd > 0) ability_util_cd--;
 if (ability_dmg_cd  > 0) ability_dmg_cd--;
 if (ability_ult_cd  > 0) ability_ult_cd--;
 
-// Lerp visual position toward grid tile center
-x = lerp(x, grid_x * TILE_SIZE + TILE_SIZE / 2, 0.25);
-y = lerp(y, grid_y * TILE_SIZE + TILE_SIZE / 2, 0.25);
+// Constant-speed slide toward grid tile center (Pokémon-style)
+var _tx = grid_x * TILE_SIZE + TILE_SIZE / 2;
+var _ty = grid_y * TILE_SIZE + TILE_SIZE / 2;
+var _spd = TILE_SIZE / 10; // 3.2 px/frame — one tile in 10 frames, matching move_cd
+x += clamp(_tx - x, -_spd, _spd);
+y += clamp(_ty - y, -_spd, _spd);
+if (abs(x - _tx) < 0.5 && abs(y - _ty) < 0.5) {
+    x = _tx; y = _ty; // snap to exact center to avoid float drift
+    walk_t = 0;
+} else {
+    walk_t++;
+}
 
 // Update aim direction toward mouse
 var _mdx = mouse_x - x;

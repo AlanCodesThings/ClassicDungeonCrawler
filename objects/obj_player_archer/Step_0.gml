@@ -65,7 +65,7 @@ if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
 }
 
 // LMB — instant ray shot
-if (mouse_check_button_pressed(mb_left)) {
+if (mouse_check_button_pressed(mb_left) && attack_cd <= 0) {
 	var snap  = grid_snap_dir_8(aim_dx, aim_dy);
 	var range = ult_active ? MAP_W : 12;
 	var cells = grid_line_cells(grid_x, grid_y, snap.dx, snap.dy, range);
@@ -82,7 +82,8 @@ if (mouse_check_button_pressed(mb_left)) {
 			if (!ult_active) break;
 		}
 	}
-	move_cd = 6;
+	attack_cd = 25;
+	move_cd   = 6;
 	exit;
 }
 

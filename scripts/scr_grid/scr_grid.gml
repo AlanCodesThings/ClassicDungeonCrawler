@@ -90,17 +90,13 @@ function add_telegraph_damage(gx, gy, col, turns_left, dmg, src_id, cc, cm) {
 
 // ── Player actions ───────────────────────────────────────────────────────────
 
-// Move player one tile; if tile occupied by enemy, bump-attack instead. Returns true if action happened.
+// Move player one tile. Returns true if the move succeeded.
 function try_move_player(ddx, ddy) {
 	if (!instance_exists(global.player_inst)) return false;
 	var p   = global.player_inst;
 	var tgx = p.grid_x + ddx;
 	var tgy = p.grid_y + ddy;
-	var eid = grid_cell_has_enemy(tgx, tgy);
-	if (eid != noone) {
-		bump_attack(eid);
-		return true;
-	}
+	if (grid_cell_has_enemy(tgx, tgy) != noone) return false;
 	if (!grid_is_walkable(tgx, tgy)) return false;
 	p.grid_x = tgx;
 	p.grid_y = tgy;
@@ -209,17 +205,32 @@ function enemy_take_turn(eid) {
 	}
 }
 
-// Update last-known player position for an enemy (respects vanish)
+// Update aggro state and last-known player position (requires LoS, no aggro through walls)
 function _update_last_known(eid) {
 	if (!instance_exists(global.player_inst)) return;
 	var p = global.player_inst;
 	var player_visible = !(variable_instance_exists(p, "invisible") && p.invisible);
-	if (player_visible) { eid.last_known_pgx = p.grid_x; eid.last_known_pgy = p.grid_y; }
+	var dist = abs(eid.grid_x - p.grid_x) + abs(eid.grid_y - p.grid_y);
+	var has_los = grid_has_los(eid.grid_x, eid.grid_y, p.grid_x, p.grid_y);
+	// Activate aggro: in range, has clear LoS, player not invisible
+	if (!eid.is_aggroed && player_visible && has_los && dist <= eid.aggro_radius) {
+		eid.is_aggroed = true;
+	}
+	// De-aggro: player moved far away
+	if (eid.is_aggroed && dist > eid.aggro_radius * 2) {
+		eid.is_aggroed = false;
+	}
+	// Update last-known only when aggroed and can see the player
+	if (eid.is_aggroed && player_visible && has_los) {
+		eid.last_known_pgx = p.grid_x;
+		eid.last_known_pgy = p.grid_y;
+	}
 }
 
 function ai_skeleton_turn(eid) {
 	if (!instance_exists(global.player_inst)) return;
 	_update_last_known(eid);
+	if (!eid.is_aggroed) return;
 	var tgx = eid.last_known_pgx, tgy = eid.last_known_pgy;
 	var dist = abs(eid.grid_x - tgx) + abs(eid.grid_y - tgy);
 	if (dist <= 1) {
@@ -234,6 +245,7 @@ function ai_skeleton_turn(eid) {
 function ai_zombie_turn(eid) {
 	if (!instance_exists(global.player_inst)) return;
 	_update_last_known(eid);
+	if (!eid.is_aggroed) return;
 	var tgx = eid.last_known_pgx, tgy = eid.last_known_pgy;
 	var dist = abs(eid.grid_x - tgx) + abs(eid.grid_y - tgy);
 	// Zombie attacks every 2 turns; at <50% HP moves every other turn too
@@ -252,6 +264,7 @@ function ai_zombie_turn(eid) {
 function ai_bat_turn(eid) {
 	if (!instance_exists(global.player_inst)) return;
 	_update_last_known(eid);
+	if (!eid.is_aggroed) return;
 	var tgx = eid.last_known_pgx, tgy = eid.last_known_pgy;
 	// Move 2 steps per turn, ignores walls
 	repeat (2) {
@@ -269,6 +282,7 @@ function ai_bat_turn(eid) {
 function ai_ghost_turn(eid) {
 	if (!instance_exists(global.player_inst)) return;
 	_update_last_known(eid);
+	if (!eid.is_aggroed) return;
 	// 25% chance to toggle phase each turn
 	if (irandom(3) == 0) eid.phase_mode = !eid.phase_mode;
 	var tgx = eid.last_known_pgx, tgy = eid.last_known_pgy;
@@ -298,6 +312,8 @@ function ai_ghost_turn(eid) {
 
 function ai_archer_mob_turn(eid) {
 	if (!instance_exists(global.player_inst)) return;
+	_update_last_known(eid);
+	if (!eid.is_aggroed) return;
 	var p = global.player_inst;
 	if (variable_instance_exists(p, "invisible") && p.invisible) return;
 	var px = p.grid_x, py = p.grid_y;
@@ -337,6 +353,8 @@ function ai_archer_mob_turn(eid) {
 
 function ai_mage_mob_turn(eid) {
 	if (!instance_exists(global.player_inst)) return;
+	_update_last_known(eid);
+	if (!eid.is_aggroed) return;
 	var p = global.player_inst;
 	if (variable_instance_exists(p, "invisible") && p.invisible) return;
 	var px = p.grid_x, py = p.grid_y;
