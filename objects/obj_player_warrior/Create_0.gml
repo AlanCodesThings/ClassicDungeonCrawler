@@ -1,6 +1,6 @@
 event_inherited();
 hp = 150; max_hp = 150;
-damage = 15;
+damage = 25;
 armor  = 0.25;
 crit_chance = 0.1; crit_mult = 2.0;
 col_half_w = 13; col_half_h = 13;
@@ -11,10 +11,13 @@ ability_dmg_max  = 4;   // charge attack
 ability_ult_max  = 20;  // 2H sword
 // Warrior-specific state
 shield_active    = false;
-charge_timer     = 0;    // frames E held (real-time)
+charge_active    = false;
+charge_timer     = 0;
 two_hand_active  = false;
 two_hand_turns_left = 0;
 riposte_declared = false;
+thrust_timer     = 0;
+sword_trail      = [];
 
 take_damage = function(dmg, sx, sy) {
 	if (invincible_turns > 0) return;
@@ -34,6 +37,6 @@ take_damage = function(dmg, sx, sy) {
 	var fin = max(1, round(dmg * (1 - armor)));
 	hp -= fin; invincible_turns = 1; hit_flash = 10;
 	var _dn = instance_create_layer(x + random_range(-6,6), y - 14, "Instances", obj_damage_number);
-	_dn.value = fin; _dn.is_crit = false;
+	_dn.value = fin; _dn.is_crit = false; _dn.is_player_damage = true;
 	if (hp <= 0) { hp = 0; is_dead = true; alarm[0] = 120; }
 };

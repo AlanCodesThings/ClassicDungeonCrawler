@@ -10,7 +10,7 @@ ability_util_max = 0;   // no utility
 ability_dmg_max  = 5;   // charge/power shot
 ability_ult_max  = 18;  // enchanted quiver
 // Archer state
-charge_timer  = 0;
-charging      = false;
+charge_level  = 0;   // 0 = not charging, 1/2/3 = charge tiers
+arrow_delay   = 0;
 pin_shot_ready = false;
 ult_turns_left = 0;

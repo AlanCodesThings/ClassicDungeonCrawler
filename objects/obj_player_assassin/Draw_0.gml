@@ -1,11 +1,11 @@
 var flash = (hit_flash > 0 && hit_flash mod 2 == 0);
-var bob = sin(current_time * 0.018) * 2;
+var _leg = (walk_t > 0) ? sin(walk_t * 0.28) * 4 : 0;
 draw_set_alpha(invisible ? 0.22 : 1.0);
 
 // -- Legs --
 draw_set_color(flash ? c_white : make_color_rgb(50, 10, 60));
-draw_rectangle(x - 6, y + 6, x - 1, y + 13 + bob, false);
-draw_rectangle(x + 1, y + 6, x + 6, y + 13 - bob, false);
+draw_rectangle(x - 6, y + 6, x - 1, y + 13 + _leg, false);
+draw_rectangle(x + 1, y + 6, x + 6, y + 13 - _leg, false);
 
 // -- Cape (behind body, trailing away from aim) --
 if (!flash) {
@@ -45,7 +45,7 @@ draw_line_width(x + aim_dx * 4 - aim_dy * 7,  y + aim_dy * 4 + aim_dx * 7,
                x + aim_dx * 10 - aim_dy * 7, y + aim_dy * 10 + aim_dx * 7, 3);
 
 // -- Flurry --
-if (flurry_active) {
+if (ability_dmg_cd > 0) {
     draw_set_alpha(0.65);
     var spin = current_time * 0.2;
     for (var fi = 0; fi < 4; fi++) {
@@ -64,7 +64,7 @@ if (invisible) {
     draw_circle(x, y, 16, true);
     draw_set_alpha(0.45);
     var sp_seed = random_get_seed();
-    random_set_seed(id + current_time div 120);
+    random_set_seed(current_time div 120);
     repeat(8) {
         draw_circle(x + irandom_range(-20, 20), y + irandom_range(-20, 20), 1, false);
     }

@@ -1,10 +1,10 @@
 var flash = (hit_flash > 0 && hit_flash mod 2 == 0);
-var bob = sin(current_time * 0.013) * 2;
+var _leg = (walk_t > 0) ? sin(walk_t * 0.28) * 4 : 0;
 
 // -- Legs --
 draw_set_color(flash ? c_white : make_color_rgb(30, 100, 30));
-draw_rectangle(x - 6, y + 6, x - 1, y + 13 + bob, false);
-draw_rectangle(x + 1, y + 6, x + 6, y + 13 - bob, false);
+draw_rectangle(x - 6, y + 6, x - 1, y + 13 + _leg, false);
+draw_rectangle(x + 1, y + 6, x + 6, y + 13 - _leg, false);
 
 // -- Torso --
 draw_set_color(flash ? c_white : make_color_rgb(45, 130, 45));
@@ -50,7 +50,7 @@ draw_line_width(tip1x, tip1y, midx, midy, 3);
 draw_line_width(tip2x, tip2y, midx, midy, 3);
 
 var string_pull = 0;
-if (charging) string_pull = min(charge_timer / 180.0, 1.0) * 10;
+if (charge_level > 0) string_pull = (charge_level / 3.0) * 11;
 if (arrow_delay > 0) string_pull = (arrow_delay / 18.0) * 6;
 var strx = midx - aim_dx * string_pull;
 var stry = midy - aim_dy * string_pull;
@@ -58,10 +58,27 @@ draw_set_color(flash ? c_white : make_color_rgb(220, 210, 190));
 draw_line(tip1x, tip1y, strx, stry);
 draw_line(tip2x, tip2y, strx, stry);
 
-// Arrow on string
-if (charging || arrow_delay > 0) {
-    draw_set_color(charging ? make_color_rgb(255, 200, 50) : make_color_rgb(200, 180, 120));
-    draw_line_width(strx, stry, strx + aim_dx * 16, stry + aim_dy * 16, 2);
+// Arrow on string + charge aura
+if (charge_level > 0 || arrow_delay > 0) {
+    var _acol;
+    if      (charge_level == 3) _acol = make_color_rgb(255, 240, 160);
+    else if (charge_level == 2) _acol = make_color_rgb(255, 160, 40);
+    else                        _acol = make_color_rgb(220, 200, 120);
+    if (arrow_delay > 0) _acol = make_color_rgb(200, 180, 120);
+    draw_set_color(flash ? c_white : _acol);
+    draw_line_width(strx, stry, strx + aim_dx * 16, stry + aim_dy * 16, 1 + charge_level);
+    // Charging aura ring — grows and intensifies with level
+    if (charge_level > 0 && !flash) {
+        var pulse = sin(current_time * 0.03) * 0.18 + 0.82;
+        draw_set_alpha(charge_level * 0.18 * pulse);
+        draw_set_color(_acol);
+        draw_circle(x, y, 12 + charge_level * 8, true);
+        if (charge_level == 3) {
+            draw_set_alpha(0.12 * pulse);
+            draw_circle(x, y, 42, true);
+        }
+        draw_set_alpha(1.0);
+    }
 }
 
 // -- Pin shot glow --
@@ -77,7 +94,7 @@ if (ult_active) {
     draw_set_alpha(0.65);
     draw_set_color(c_yellow);
     var sp_seed = random_get_seed();
-    random_set_seed(id + current_time div 60);
+    random_set_seed(current_time div 60);
     repeat(6) {
         draw_circle(x + irandom_range(-22, 22), y + irandom_range(-22, 22), 2, false);
     }

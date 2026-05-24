@@ -4,8 +4,11 @@ if (hit_flash > 0) hit_flash--;
 if (move_anim_timer > 0) move_anim_timer--;
 
 // Lerp visual position toward grid tile center
-x = lerp(x, grid_x * TILE_SIZE + TILE_SIZE / 2, 0.25);
-y = lerp(y, grid_y * TILE_SIZE + TILE_SIZE / 2, 0.25);
+var _tx = grid_x * TILE_SIZE + TILE_SIZE / 2;
+var _ty = grid_y * TILE_SIZE + TILE_SIZE / 2;
+x = lerp(x, _tx, 0.18);
+y = lerp(y, _ty, 0.18);
+if (point_distance(x, y, _tx, _ty) > 1) { walk_t++; } else { walk_t = 0; }
 
 // Update aim direction toward mouse
 var _mdx = mouse_x - x;

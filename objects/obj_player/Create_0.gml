@@ -23,6 +23,7 @@ ability_ult_cd   = 0; ability_ult_max   = 20;
 ult_active = false;
 ult_turns_left = 0;
 hit_flash = 0;
+walk_t    = 0;
 is_dead = false;
 depth   = -10;
 global.player_inst = id;
@@ -37,6 +38,6 @@ take_damage = function(dmg, sx, sy) {
 	invincible_turns = 1;
 	hit_flash = 10;
 	var _dn = instance_create_layer(x + random_range(-6, 6), y - 14, "Instances", obj_damage_number);
-	_dn.value = final_dmg; _dn.is_crit = false;
+	_dn.value = final_dmg; _dn.is_crit = false; _dn.is_player_damage = true;
 	if (hp <= 0) { hp = 0; is_dead = true; alarm[0] = 120; }
 };

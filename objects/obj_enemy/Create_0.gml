@@ -15,6 +15,8 @@ last_known_pgy     = 0;
 turns_until_attack = 0;
 attack_cd_turns    = 0;
 alt_turn           = false;
+is_aggroed         = false;
+aggro_radius       = 8;
 is_dead            = false;
 depth              = 0;
 // Scale with floor depth

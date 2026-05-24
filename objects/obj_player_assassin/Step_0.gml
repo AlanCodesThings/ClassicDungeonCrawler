@@ -66,7 +66,9 @@ if (keyboard_check_pressed(ord("E")) && ability_dmg_cd <= 0) {
 	var snap = grid_snap_dir_8(aim_dx, aim_dy);
 	var tx   = grid_x + snap.dx;
 	var ty   = grid_y + snap.dy;
+	var _fe = grid_cell_has_enemy(tx, ty);
 	for (var _i = 0; _i < 6; _i++) {
+		if (instance_exists(_fe)) _fe.invincible_timer = 0;
 		var fc = 0.1 + _i * 0.15;
 		player_grid_attack(tx, ty, damage, fc, crit_mult);
 	}

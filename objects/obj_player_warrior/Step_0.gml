@@ -1,41 +1,38 @@
 event_inherited(); // visual lerp, timers, stairs
 if (is_dead) exit;
 
-// E — charge attack (real-time hold, fires as a turn action on release)
-if (keyboard_check(ord("E")) && ability_dmg_cd <= 0) {
-	charge_timer = min(charge_timer + 1, 180);
-	exit; // lock movement while charging
-}
-if (keyboard_check_released(ord("E")) && ability_dmg_cd <= 0 && charge_timer > 0) {
-	var lvl  = charge_timer div 30; // 0–6
+if (thrust_timer > 0) thrust_timer--;
+
+// Visual charge build-up (increments while waiting for the auto-fire turn)
+if (charge_active) charge_timer = min(charge_timer + 1, 60);
+
+// Guard against input during animation
+if (move_anim_timer > 0) exit;
+
+// Auto-fire: charged attack triggers automatically on the player's next turn
+if (charge_active) {
+	charge_active = false;
+	charge_timer  = 0;
 	var snap = grid_snap_dir_8(aim_dx, aim_dy);
-	var adx  = snap.dx; var ady = snap.dy;
-	// Line of 1+lvl tiles
-	var cells = grid_line_cells(grid_x, grid_y, adx, ady, 1 + lvl);
-	for (var _i = 0; _i < array_length(cells); _i++) {
-		player_grid_attack(cells[_i].gx, cells[_i].gy, round(damage * (1 + lvl)), crit_chance, crit_mult);
+	var adx = snap.dx; var ady = snap.dy;
+	for (var _i = 1; _i <= 3; _i++) {
+		player_grid_attack(grid_x + adx * _i, grid_y + ady * _i, damage * 4, crit_chance, crit_mult);
 	}
-	// AoE at end tile
-	if (array_length(cells) > 0) {
-		var last = cells[array_length(cells) - 1];
-		var rad  = 1 + lvl div 2;
-		for (var _dy = -rad; _dy <= rad; _dy++) {
-			for (var _dx2 = -rad; _dx2 <= rad; _dx2++) {
-				if (abs(_dx2) + abs(_dy) <= rad)
-					player_grid_attack(last.gx + _dx2, last.gy + _dy, round(damage * (1 + lvl)), crit_chance, crit_mult);
-			}
-		}
-	}
-	charge_timer    = 0;
 	ability_dmg_cd  = ability_dmg_max;
+	sword_trail = []; thrust_timer = 12;
 	process_turn();
 	move_anim_timer = MOVE_ANIM_DELAY;
 	exit;
 }
-if (!keyboard_check(ord("E"))) charge_timer = 0;
 
-// Guard against input during animation
-if (move_anim_timer > 0) exit;
+// E — begin charge (spends this turn, fires automatically next turn)
+if (keyboard_check_pressed(ord("E")) && ability_dmg_cd <= 0) {
+	charge_active = true;
+	charge_timer  = 0;
+	process_turn();
+	move_anim_timer = MOVE_ANIM_DELAY;
+	exit;
+}
 
 // Q — 2H sword ultimate
 if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
@@ -65,9 +62,9 @@ if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
 		if (_ix != 0 && _iy != 0) _iy = 0;
 		// Attempt to move 2 tiles
 		var moved = false;
-		if (try_move_player(_ix, _iy)) {
+		if (try_move_no_attack(_ix, _iy)) {
 			moved = true;
-			try_move_player(_ix, _iy); // second step
+			try_move_no_attack(_ix, _iy); // second step
 		}
 		if (moved) {
 			invincible_turns = 1;
@@ -99,6 +96,8 @@ if (mouse_check_button_pressed(mb_left)) {
 			player_grid_attack(grid_x + _d.dx, grid_y + _d.dy, round(damage * 3), crit_chance, crit_mult);
 		}
 	}
+	sword_trail  = [];
+	thrust_timer = 12;
 	process_turn();
 	move_anim_timer = MOVE_ANIM_DELAY;
 	exit;
