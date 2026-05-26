@@ -8,7 +8,9 @@ col_half_w = 10; col_half_h = 10;
 ability_dash_max = 240;  // 4s vanish CD (doubled = 8s after use)
 ability_util_max = 360;  // 6s smoke bomb
 ability_dmg_max  = 240;  // 4s flurry
-ability_ult_max  = 720;  // 12s shadowstep
+ability_ult_max  = 480;  // 8s per charge
+ult_charges      = 3;
+ult_charge_max   = 3;
 // Assassin state
 invisible      = false;
 vanish_timer   = 0;

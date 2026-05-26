@@ -10,6 +10,12 @@ if (invisible && vanish_timer > 0) {
 	if (vanish_timer <= 0) { invisible = false; }
 }
 
+// Shadowstep charge recharge (parent already decremented ability_ult_cd)
+if (ult_charges < ult_charge_max && ability_ult_cd <= 0) {
+	ult_charges++;
+	if (ult_charges < ult_charge_max) ability_ult_cd = ability_ult_max;
+}
+
 // Flurry channel — locks player for 2s, fires one hit every 20 frames
 if (flurry_active) {
 	if (flurry_timer mod 10 == 0 && flurry_hits_done < 6) {
@@ -30,7 +36,7 @@ if (flurry_active) {
 }
 
 // Q — shadowstep: teleport adjacent to nearest enemy, hit 20 times
-if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
+if (keyboard_check_pressed(ord("Q")) && ult_charges > 0) {
 	var target = noone; var best = 99999;
 	with (obj_enemy) { var _d = point_distance(x, y, mouse_x, mouse_y); if (_d < best) { best = _d; target = id; } }
 	with (obj_boss)  { var _d = point_distance(x, y, mouse_x, mouse_y); if (_d < best) { best = _d; target = id; } }
@@ -54,7 +60,10 @@ if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
 				target.invincible_timer = 0;
 				deal_damage(target, x, y, damage, crit_chance, crit_mult, 0);
 			}
-			ability_ult_cd = ability_ult_max;
+			ult_charges--;
+			if (ult_charges < ult_charge_max && ability_ult_cd <= 0) {
+				ability_ult_cd = ability_ult_max;
+			}
 			move_cd = 6;
 			exit;
 		}

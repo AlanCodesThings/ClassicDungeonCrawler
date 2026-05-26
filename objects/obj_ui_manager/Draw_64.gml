@@ -85,7 +85,7 @@ if (cls == "Warrior") {
 } else if (cls == "Assassin") {
     slot_labs = ["STAB", "SMOKE", "FLURRY", "STEP"];
 } else {
-    slot_labs = ["FIRE", "—", "POWER", "QUIVER"];
+    slot_labs = ["FIRE", "DODGE", "POWER", "RAPIDFIRE"];
 }
 
 // Active state (slot lights up when ability is in-use)
@@ -109,6 +109,10 @@ for (var i = 0; i < n_slots; i++) {
     var col = slot_cols[i];
     var has_cd = (mcd > 0);
     var ready  = (!has_cd || cd <= 0);
+    // Charge-based slot: treat as ready while any charge is available
+    if (cls == "Assassin" && i == 3 && variable_instance_exists(p, "ult_charges")) {
+        ready = (p.ult_charges > 0);
+    }
 
     // Ready-flash tracking
     if (has_cd) {
@@ -203,9 +207,13 @@ for (var i = 0; i < n_slots; i++) {
                 draw_line_width(ic - 10, icy, ic - 6, icy - 5, 1);
                 draw_line_width(ic - 10, icy, ic - 6, icy + 5, 1);
                 break;
-            case 1: // No ability
-                draw_set_color(make_color_rgb(55, 50, 75));
-                draw_line_width(ic - 11, icy, ic + 11, icy, 3);
+            case 1: // Dodge — figure leaping with speed lines
+                draw_set_color(icon_col);
+                draw_line_width(ic - 13, icy + 2, ic - 2, icy + 2, 2);
+                draw_line_width(ic - 11, icy - 3, ic - 3, icy - 3, 1);
+                draw_line_width(ic - 9,  icy + 7, ic - 2, icy + 7, 1);
+                draw_circle(ic + 5, icy - 4, 4, true);
+                draw_line_width(ic + 1, icy + 1, ic + 12, icy + 8, 3);
                 break;
             case 2: // Power shot — drawn bow
                 draw_line_width(ic - 1, icy - 14, ic + 5, icy, 2);
@@ -265,6 +273,26 @@ for (var i = 0; i < n_slots; i++) {
     draw_set_color(border_col);
     draw_rectangle(sx, sy, sx + slot_sz, sy + slot_sz, true);
     draw_set_alpha(1.0);
+
+    // Charge pips for assassin Q
+    if (cls == "Assassin" && i == 3 && variable_instance_exists(p, "ult_charges")) {
+        draw_set_alpha(1.0);
+        var _pip_gap = 14;
+        var _pip_x0  = sx + slot_sz / 2 - _pip_gap;
+        var _pip_y   = sy + slot_sz - 10;
+        for (var _pi = 0; _pi < p.ult_charge_max; _pi++) {
+            var _pip_x = _pip_x0 + _pi * _pip_gap;
+            if (_pi < p.ult_charges) {
+                draw_set_color(col);
+                draw_circle(_pip_x, _pip_y, 4, false);
+            } else {
+                draw_set_color(make_color_rgb(28, 22, 45));
+                draw_circle(_pip_x, _pip_y, 4, false);
+                draw_set_color(make_color_rgb(70, 60, 100));
+                draw_circle(_pip_x, _pip_y, 4, true);
+            }
+        }
+    }
 
     // Key label — bottom of slot
     draw_set_color(make_color_rgb(120, 115, 155));

@@ -1,3 +1,17 @@
+// -- Dodge ghost trail --
+if (dodge_timer > 0) {
+    var _fade = dodge_timer / 18.0;
+    for (var _gi = 4; _gi >= 1; _gi--) {
+        var _t  = _gi / 4.0; // 1.0 = old position, 0.25 = near current
+        var _gx = lerp(x, dodge_from_x, _t);
+        var _gy = lerp(y, dodge_from_y, _t);
+        draw_set_alpha(_fade * (1.0 - _t * 0.55) * 0.55);
+        draw_set_color(make_color_rgb(140, 210, 255));
+        draw_rectangle(_gx - 8, _gy - 20, _gx + 8, _gy + 13, false);
+    }
+    draw_set_alpha(1.0);
+}
+
 var flash = (hit_flash > 0 && hit_flash mod 2 == 0);
 var bob = sin(current_time * 0.013) * 2;
 
@@ -51,7 +65,7 @@ draw_line_width(tip2x, tip2y, midx, midy, 3);
 
 var string_pull = 0;
 if (charging) string_pull = min(charge_timer / 180.0, 1.0) * 10;
-if (arrow_delay > 0) string_pull = (arrow_delay / 18.0) * 6;
+if (arrow_delay > 0) string_pull = (1.0 - arrow_delay / 18.0) * 6;
 var strx = midx - aim_dx * string_pull;
 var stry = midy - aim_dy * string_pull;
 draw_set_color(flash ? c_white : make_color_rgb(220, 210, 190));
@@ -77,7 +91,7 @@ if (ult_active) {
     draw_set_alpha(0.65);
     draw_set_color(c_yellow);
     var sp_seed = random_get_seed();
-    random_set_seed(id + current_time div 60);
+    random_set_seed(real(id) + current_time div 60);
     repeat(6) {
         draw_circle(x + irandom_range(-22, 22), y + irandom_range(-22, 22), 2, false);
     }
