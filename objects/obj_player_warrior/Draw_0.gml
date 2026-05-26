@@ -38,12 +38,13 @@ if (two_hand_active && !flash) {
     draw_rectangle(x - 16, y - 22, x + 16, y + 16, true);
 }
 
+var _parry_hit = (parry_counter_timer > 0);
 // -- Swing trail (solid fan + bright arc edge) --
 if (!flash && array_length(sword_trail) > 1) {
     gpu_set_blendmode(bm_add);
     var _n    = array_length(sword_trail);
-    var _col  = two_hand_active ? make_color_rgb(255, 130, 0)   : make_color_rgb(80, 160, 255);
-    var _edge = two_hand_active ? make_color_rgb(255, 230, 140) : make_color_rgb(210, 235, 255);
+    var _col  = _parry_hit ? make_color_rgb(255, 220, 60)  : (two_hand_active ? make_color_rgb(255, 130, 0)   : make_color_rgb(80, 160, 255));
+    var _edge = _parry_hit ? make_color_rgb(255, 255, 200) : (two_hand_active ? make_color_rgb(255, 230, 140) : make_color_rgb(210, 235, 255));
     // Filled fan — transparent at player, bright at tip arc
     draw_primitive_begin(pr_trianglefan);
     draw_vertex_color(x, y, _col, 0);
@@ -63,7 +64,7 @@ if (!flash && array_length(sword_trail) > 1) {
 }
 
 // -- Sword (swings through arc on attack) --
-var sw_len = two_hand_active ? 36 : 24;
+var sw_len = two_hand_active ? 36 : (_parry_hit ? 30 : 24);
 var _sdx, _sdy;
 if (thrust_timer > 0) {
     var _t  = 1 - thrust_timer / 12.0;
@@ -75,28 +76,59 @@ if (thrust_timer > 0) {
 } else {
     _sdx = aim_dx; _sdy = aim_dy;
 }
+// Guard stance during parry — sword held perpendicular across body
+if (parry_active) { _sdx = -aim_dy; _sdy = aim_dx; }
 var _px = -_sdy; var _py = _sdx; // perpendicular to blade
-draw_set_color(flash ? c_white : (two_hand_active ? make_color_rgb(255, 160, 40) : make_color_rgb(205, 215, 230)));
+draw_set_color(flash ? c_white : (_parry_hit ? make_color_rgb(255, 235, 100) : (parry_active ? make_color_rgb(220, 205, 80) : (two_hand_active ? make_color_rgb(255, 160, 40) : make_color_rgb(205, 215, 230)))));
 draw_line_width(x + _px * 3,              y + _py * 3,
                 x + _sdx * sw_len + _px * 3, y + _sdy * sw_len + _py * 3, 4);
 if (!flash) {
-    draw_set_color(two_hand_active ? make_color_rgb(255, 230, 110) : make_color_rgb(155, 160, 180));
+    draw_set_color(_parry_hit ? make_color_rgb(255, 255, 170) : (parry_active ? make_color_rgb(180, 165, 50) : (two_hand_active ? make_color_rgb(255, 230, 110) : make_color_rgb(155, 160, 180))));
     draw_line_width(x - _px * 3,              y - _py * 3,
                     x + _sdx * sw_len - _px * 3, y + _sdy * sw_len - _py * 3, 2);
     draw_set_color(make_color_rgb(150, 130, 85));
     draw_line_width(x + _px * 8, y + _py * 8, x - _px * 8, y - _py * 8, 3);
 }
 
-// -- Shield --
-if (shield_active) {
-    var shx = x - aim_dx * 14 + aim_dy * 2;
-    var shy = y - aim_dy * 14 - aim_dx * 2;
-    draw_set_color(make_color_rgb(25, 145, 195));
-    draw_circle(shx, shy, 13, false);
-    draw_set_color(make_color_rgb(15, 90, 135));
-    draw_circle(shx, shy, 13, true);
-    draw_set_color(make_color_rgb(190, 235, 255));
-    draw_line_width(shx - aim_dy * 8, shy + aim_dx * 8, shx + aim_dy * 8, shy - aim_dx * 8, 2);
+// -- Parry stance --
+if (parry_active) {
+    var _pt = parry_timer / parry_timer_max;
+    gpu_set_blendmode(bm_add);
+    draw_set_color(make_color_rgb(255, 220, 80));
+    draw_set_alpha(0.35 + sin(current_time * 0.045) * 0.2);
+    draw_circle(x, y, 24, true);
+    var _spin = current_time * 0.016;
+    draw_set_alpha(0.85 * _pt);
+    for (var _pi = 0; _pi < 4; _pi++) {
+        var _pa = _spin * 360 + _pi * 90;
+        draw_line_width(x + lengthdir_x(10, _pa), y + lengthdir_y(10, _pa),
+                        x + lengthdir_x(24, _pa), y + lengthdir_y(24, _pa), 3);
+    }
+    gpu_set_blendmode(bm_normal);
+    draw_set_alpha(1.0);
+}
+
+// -- Parry counter-attack burst --
+if (parry_counter_timer > 0) {
+    var _pct = parry_counter_timer / 40.0;
+    gpu_set_blendmode(bm_add);
+    draw_set_color(make_color_rgb(255, 210, 50));
+    // Expanding shockwave ring
+    draw_set_alpha(_pct * 0.85);
+    draw_circle(x, y, (1.0 - _pct) * 90 + 8, true);
+    // 8-directional slash rays
+    draw_set_alpha(_pct * 0.8);
+    var _cr = (1.0 - _pct) * 70 + 10;
+    var _lw = max(1, round(_pct * 6));
+    for (var _ci = 0; _ci < 8; _ci++) {
+        draw_line_width(x, y, x + lengthdir_x(_cr, _ci * 45), y + lengthdir_y(_cr, _ci * 45), _lw);
+    }
+    // White core flash
+    draw_set_color(c_white);
+    draw_set_alpha(_pct * 0.95);
+    draw_circle(x, y, _pct * 18, false);
+    gpu_set_blendmode(bm_normal);
+    draw_set_alpha(1.0);
 }
 
 // -- Charge cone --

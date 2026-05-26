@@ -20,3 +20,10 @@ swing_ang_a  = 0;
 swing_ang_b  = 0;
 swing_adx    = 0;
 swing_ady    = 0;
+// Flurry channel state
+flurry_active    = false;
+flurry_timer     = 0;
+flurry_hits_done = 0;
+flurry_target    = noone;
+flurry_adx       = 0;
+flurry_ady       = 0;

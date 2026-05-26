@@ -1,4 +1,4 @@
-event_inherited();
+﻿event_inherited();
 if (is_dead) exit;
 
 // Enchanted quiver timer
@@ -46,26 +46,8 @@ if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
 	exit;
 }
 
-// SPACE — dodge (move 2 tiles, next shot pins)
-if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
-	var _ix = (keyboard_check(ord("D"))||keyboard_check(vk_right)) - (keyboard_check(ord("A"))||keyboard_check(vk_left));
-	var _iy = (keyboard_check(ord("S"))||keyboard_check(vk_down))  - (keyboard_check(ord("W"))||keyboard_check(vk_up));
-	if (_ix == 0 && _iy == 0) { _ix = -round(aim_dx); _iy = -round(aim_dy); }
-	if (_ix != 0 && _iy != 0) _iy = 0;
-	if (_ix != 0 || _iy != 0) {
-		var moved = try_move_player(_ix, _iy);
-		if (moved) try_move_player(_ix, _iy);
-		if (moved) {
-			pin_shot_ready  = true;
-			ability_dash_cd = ability_dash_max;
-			move_cd = 10;
-			exit;
-		}
-	}
-}
-
-// LMB — instant ray shot
-if (mouse_check_button_pressed(mb_left) && attack_cd <= 0) {
+// LMB / SPACE — instant ray shot
+if ((mouse_check_button_pressed(mb_left) || keyboard_check_pressed(vk_space)) && attack_cd <= 0) {
 	var snap  = grid_snap_dir_8(aim_dx, aim_dy);
 	var range = ult_active ? MAP_W : 12;
 	var cells = grid_line_cells(grid_x, grid_y, snap.dx, snap.dy, range);

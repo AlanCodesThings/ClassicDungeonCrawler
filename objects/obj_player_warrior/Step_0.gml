@@ -1,8 +1,9 @@
-event_inherited(); // visual lerp, timers, stairs
+﻿event_inherited(); // visual lerp, timers, stairs
 if (is_dead) exit;
 
 // Charge slam animation timer
 if (charge_slam_timer > 0) charge_slam_timer--;
+if (parry_counter_timer > 0) parry_counter_timer--;
 
 // Sword swing trail — record tip path during attack animation
 if (thrust_timer > 0) {
@@ -22,9 +23,20 @@ if (two_hand_active) {
 	if (two_hand_timer <= 0) { two_hand_active = false; two_hand_timer = 0; }
 }
 
-// Shield / riposte — read button state every frame
-shield_active    = mouse_check_button(mb_right) && !two_hand_active;
+// Parry — active window countdown; blocks all input while running
+if (parry_active) {
+    parry_timer--;
+    if (parry_timer <= 0) { parry_active = false; parry_timer = 0; ability_util_cd = ability_util_max; }
+    exit;
+}
+// Riposte (2H mode) — read button each frame
 riposte_declared = mouse_check_button(mb_right) && two_hand_active;
+// RMB — activate parry (not in 2H mode)
+if (mouse_check_button_pressed(mb_right) && !two_hand_active && ability_util_cd <= 0) {
+    parry_active = true;
+    parry_timer  = parry_timer_max;
+    exit;
+}
 
 // E — charge attack: 3 levels (lvl1≥20f 2×dmg 2-deep, lvl2≥50f 3.5×dmg 3-deep, lvl3≥90f 5.5×dmg 4-deep)
 // Cone width expands: depth d has 2d-1 tiles wide centred on aim axis
@@ -72,29 +84,8 @@ if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
 	exit;
 }
 
-// SPACE — shuffle (move 2 tiles, brief invincibility)
-if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
-	var _ix = (keyboard_check(ord("D"))||keyboard_check(vk_right)) - (keyboard_check(ord("A"))||keyboard_check(vk_left));
-	var _iy = (keyboard_check(ord("S"))||keyboard_check(vk_down))  - (keyboard_check(ord("W"))||keyboard_check(vk_up));
-	if (_ix == 0 && _iy == 0) { _ix = round(aim_dx); _iy = round(aim_dy); }
-	if (_ix != 0 && _iy != 0) _iy = 0;
-	if (_ix != 0 || _iy != 0) {
-		var moved = false;
-		if (try_move_player(_ix, _iy)) {
-			moved = true;
-			try_move_player(_ix, _iy);
-		}
-		if (moved) {
-			invincible_timer = 30;
-			ability_dash_cd  = ability_dash_max;
-			move_cd = 10;
-			exit;
-		}
-	}
-}
-
-// LMB — basic attack (3-tile arc; 5-tile arc in 2H mode)
-if (mouse_check_button_pressed(mb_left) && attack_cd <= 0) {
+// LMB / SPACE — basic attack (3-tile arc; 5-tile arc in 2H mode)
+if ((mouse_check_button_pressed(mb_left) || keyboard_check_pressed(vk_space)) && attack_cd <= 0) {
 	var snap = grid_snap_dir_8(aim_dx, aim_dy);
 	var adx  = snap.dx; var ady = snap.dy;
 	var ang  = point_direction(0, 0, adx, ady);

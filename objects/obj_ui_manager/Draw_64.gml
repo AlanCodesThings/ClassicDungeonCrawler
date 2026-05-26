@@ -46,10 +46,10 @@ if (global.boss_floor && global.boss_killed) {
 }
 draw_set_halign(fa_left);
 
-// ── Hotbar — 5 slots: LMB / SPACE / RMB / E / Q ──────────────────
+// ── Hotbar — 4 slots: LMB / RMB / E / Q ──────────────────────────
 var slot_sz  = 64;
 var slot_gap = 10;
-var n_slots  = 5;
+var n_slots  = 4;
 var bar_w    = slot_sz * n_slots + slot_gap * (n_slots - 1);
 var bar_x    = floor((display_get_gui_width()  - bar_w) * 0.5);
 var bar_y    = display_get_gui_height() - slot_sz - 22;
@@ -70,37 +70,36 @@ draw_rectangle(bar_x - bar_pad, bar_y - bar_pad - 18,
                bar_x + bar_w + bar_pad, bar_y + slot_sz + bar_pad, true);
 
 // Slot CDs / maxes  (index 0 = LMB basic, no CD)
-var slot_cds  = [0, p.ability_dash_cd, p.ability_util_cd, p.ability_dmg_cd,  p.ability_ult_cd];
-var slot_maxs = [0, p.ability_dash_max, p.ability_util_max, p.ability_dmg_max, p.ability_ult_max];
+var slot_cds  = [0, p.ability_util_cd, p.ability_dmg_cd,  p.ability_ult_cd];
+var slot_maxs = [0, p.ability_util_max, p.ability_dmg_max, p.ability_ult_max];
 var slot_cols = [
     make_color_rgb(195, 190, 220),  // LMB — silver
-    make_color_rgb(80,  210, 235),  // SPACE — cyan
     make_color_rgb(80,  220, 120),  // RMB — lime
     make_color_rgb(225, 150, 50),   // E — orange
     make_color_rgb(185, 100, 255)]; // Q — purple
-var slot_keys = ["LMB", "SPACE", "RMB", "E", "Q"];
+var slot_keys = ["LMB", "RMB", "E", "Q"];
 
 var slot_labs = [];
 if (cls == "Warrior") {
-    slot_labs = ["THRUST", "SHUFFLE", "SHIELD", "CHARGE", "2H MODE"];
+    slot_labs = ["THRUST", "PARRY", "CHARGE", "2H MODE"];
 } else if (cls == "Assassin") {
-    slot_labs = ["STAB", "VANISH", "SMOKE", "FLURRY", "STEP"];
+    slot_labs = ["STAB", "SMOKE", "FLURRY", "STEP"];
 } else {
-    slot_labs = ["FIRE", "DODGE", "—", "POWER", "QUIVER"];
+    slot_labs = ["FIRE", "—", "POWER", "QUIVER"];
 }
 
 // Active state (slot lights up when ability is in-use)
-var slot_active = [false, false, false, false, false];
+var slot_active = [false, false, false, false];
 if (p.move_cd > 0)                                                            slot_active[0] = true;
+if (variable_instance_exists(p, "parry_active")    && p.parry_active)        slot_active[1] = true;
 if (variable_instance_exists(p, "invisible")       && p.invisible)           slot_active[1] = true;
 if (variable_instance_exists(p, "vanish_timer")    && p.vanish_timer > 0)   slot_active[1] = true;
-if (variable_instance_exists(p, "shield_active")   && p.shield_active)       slot_active[2] = true;
-if (variable_instance_exists(p, "charge_timer")    && p.charge_timer > 0)   slot_active[3] = true;
-if (variable_instance_exists(p, "charging")        && p.charging)            slot_active[3] = true;
-if (variable_instance_exists(p, "two_hand_active") && p.two_hand_active)     slot_active[4] = true;
-if (variable_instance_exists(p, "two_hand_timer")  && p.two_hand_timer > 0) slot_active[4] = true;
-if (variable_instance_exists(p, "ult_timer")       && p.ult_timer > 0)      slot_active[4] = true;
-if (p.ult_active)                                                             slot_active[4] = true;
+if (variable_instance_exists(p, "charge_timer")    && p.charge_timer > 0)   slot_active[2] = true;
+if (variable_instance_exists(p, "charging")        && p.charging)            slot_active[2] = true;
+if (variable_instance_exists(p, "two_hand_active") && p.two_hand_active)     slot_active[3] = true;
+if (variable_instance_exists(p, "two_hand_timer")  && p.two_hand_timer > 0) slot_active[3] = true;
+if (variable_instance_exists(p, "ult_timer")       && p.ult_timer > 0)      slot_active[3] = true;
+if (p.ult_active)                                                             slot_active[3] = true;
 
 for (var i = 0; i < n_slots; i++) {
     var sx  = bar_x + i * (slot_sz + slot_gap);
@@ -149,27 +148,19 @@ for (var i = 0; i < n_slots; i++) {
                 draw_line_width(ic - 7, icy - 3, ic + 7, icy + 3, 2);
                 draw_circle(ic + 12, icy - 12, 2, false);
                 break;
-            case 1: // Shuffle — right arrow
-                draw_triangle(ic + 13, icy, ic + 1, icy - 10, ic + 1, icy + 10, false);
-                draw_rectangle(ic - 10, icy - 4, ic + 1, icy + 4, false);
+            case 1: // Parry — incoming blade caught at impact point
+                draw_line_width(ic - 13, icy - 11, ic + 4,  icy + 8,  3);
+                draw_line_width(ic - 7,  icy + 10, ic + 13, icy - 8,  3);
+                draw_circle(ic - 2, icy, 5, false);
                 break;
-            case 2: // Shield — D-shape
-                draw_circle(ic, icy - 1, 12, false);
-                draw_set_color(make_color_rgb(11, 9, 20));
-                draw_rectangle(ic - 14, icy + 9, ic + 14, icy + 18, false);
-                draw_set_color(icon_col);
-                draw_circle(ic, icy - 1, 12, true);
-                draw_line_width(ic, icy - 13, ic, icy + 9, 2);
-                break;
-            case 3: // Charge — arc rings + bolt
+            case 2: // Charge — arc rings + bolt
                 draw_ellipse(ic - 14, icy - 8, ic + 14, icy + 8, true);
                 draw_ellipse(ic - 9,  icy - 5, ic + 9,  icy + 5, true);
-                // Lightning bolt
                 draw_line_width(ic - 3, icy - 8, ic + 3,  icy - 1, 2);
                 draw_line_width(ic + 3, icy - 1, ic - 2,  icy + 3, 2);
                 draw_line_width(ic - 2, icy + 3, ic + 4, icy + 10, 2);
                 break;
-            case 4: // 2H sword — wider blade
+            case 3: // 2H sword — wider blade
                 draw_line_width(ic - 13, icy + 13, ic + 13, icy - 13, 5);
                 draw_line_width(ic - 9,  icy - 4,  ic + 9,  icy + 4,  2);
                 draw_circle(ic + 14, icy - 14, 3, false);
@@ -184,26 +175,21 @@ for (var i = 0; i < n_slots; i++) {
                 draw_circle(ic - 12, icy - 12, 2, false);
                 draw_circle(ic + 12, icy - 12, 2, false);
                 break;
-            case 1: // Vanish — slashed eye
-                draw_ellipse(ic - 13, icy - 5, ic + 13, icy + 5, true);
-                draw_circle(ic, icy, 4, false);
-                draw_line_width(ic - 11, icy + 8, ic + 11, icy - 8, 2);
-                break;
-            case 2: // Smoke bomb — cloud
+            case 1: // Smoke bomb — cloud
                 draw_circle(ic,     icy + 3,  8, false);
                 draw_circle(ic - 8, icy + 5,  6, false);
                 draw_circle(ic + 8, icy + 5,  6, false);
                 draw_circle(ic - 3, icy - 4,  7, false);
                 draw_circle(ic + 4, icy - 3,  6, false);
                 break;
-            case 3: // Flurry — starburst of lines
+            case 2: // Flurry — starburst of lines
                 for (var li = 0; li < 6; li++) {
                     var la = li * 60;
                     draw_line_width(ic + lengthdir_x(5, la),  icy + lengthdir_y(5, la),
                                     ic + lengthdir_x(14, la), icy + lengthdir_y(14, la), 2);
                 }
                 break;
-            case 4: // Shadowstep — portal ring + figure
+            case 3: // Shadowstep — portal ring + figure
                 draw_circle(ic, icy, 12, true);
                 draw_circle(ic, icy, 7,  false);
                 draw_circle(ic, icy - 6, 3, false);
@@ -217,25 +203,18 @@ for (var i = 0; i < n_slots; i++) {
                 draw_line_width(ic - 10, icy, ic - 6, icy - 5, 1);
                 draw_line_width(ic - 10, icy, ic - 6, icy + 5, 1);
                 break;
-            case 1: // Dodge — arrow + pin circle
-                draw_triangle(ic + 12, icy, ic - 2, icy - 9, ic - 2, icy + 9, false);
-                draw_rectangle(ic - 11, icy - 3, ic - 2, icy + 3, false);
-                draw_set_color(make_color_rgb(80, 200, 255));
-                draw_circle(ic + 12, icy - 11, 4, true);
-                draw_set_color(icon_col);
-                break;
-            case 2: // No ability
+            case 1: // No ability
                 draw_set_color(make_color_rgb(55, 50, 75));
                 draw_line_width(ic - 11, icy, ic + 11, icy, 3);
                 break;
-            case 3: // Power shot — drawn bow
+            case 2: // Power shot — drawn bow
                 draw_line_width(ic - 1, icy - 14, ic + 5, icy, 2);
                 draw_line_width(ic + 5, icy, ic - 1, icy + 14, 2);
                 draw_line(ic - 1, icy - 14, ic - 10, icy);
                 draw_line(ic - 1, icy + 14, ic - 10, icy);
                 draw_line_width(ic - 10, icy, ic + 5, icy, 2);
                 break;
-            case 4: // Quiver — bundle of arrows
+            case 3: // Quiver — bundle of arrows
                 draw_rectangle(ic - 5, icy - 11, ic + 5, icy + 8, false);
                 draw_ellipse(ic - 5, icy + 5, ic + 5, icy + 9, false);
                 for (var qi = 0; qi < 3; qi++) {

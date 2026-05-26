@@ -6,11 +6,14 @@ crit_chance = 0.1; crit_mult = 2.0;
 col_half_w = 13; col_half_h = 13;
 // Ability cooldowns (frames, 60fps)
 ability_dash_max = 180;  // 3s shuffle
-ability_util_max = 0;    // shield — hold to use, no CD
+ability_util_max = 360;  // parry — 6s cooldown
 ability_dmg_max  = 240;  // 4s charge attack
 ability_ult_max  = 1200; // 20s 2H sword
 // Warrior-specific state
-shield_active      = false;
+parry_active        = false;
+parry_timer         = 0;
+parry_timer_max     = 120; // 2s active window
+parry_counter_timer = 0;   // drives counter-attack visual
 charge_timer       = 0;
 two_hand_active    = false;
 two_hand_timer     = 0;

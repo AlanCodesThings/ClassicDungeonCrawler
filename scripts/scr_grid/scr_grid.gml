@@ -143,8 +143,21 @@ function grid_attack_tile(gx, gy, dmg, src_id, cc, cm) {
 	var p = global.player_inst;
 	if (p.grid_x != gx || p.grid_y != gy) return;
 	if (p.invincible_timer > 0) return;
-	// Shield block
-	if (variable_instance_exists(p, "shield_active") && p.shield_active) return;
+	// Parry counter — absorb the hit and retaliate with 8x damage
+	if (variable_instance_exists(p, "parry_active") && p.parry_active) {
+		p.parry_active        = false;
+		p.parry_timer         = 0;
+		p.ability_util_cd     = p.ability_util_max;
+		p.parry_counter_timer = 40;
+		p.sword_trail  = [];
+		p.thrust_timer = 20;
+		p.swing_ang    = instance_exists(src_id) ? point_direction(p.x, p.y, src_id.x, src_id.y) : point_direction(0, 0, p.aim_dx, p.aim_dy);
+		p.swing_half   = 135; // wide sweeping counter-slash
+		if (instance_exists(src_id)) {
+			deal_damage(src_id, p.x, p.y, round(p.damage * 8), p.crit_chance, p.crit_mult, 0);
+		}
+		return;
+	}
 	// Smoke protection
 	for (var _i = 0; _i < array_length(global.smoke_tiles); _i++) {
 		if (global.smoke_tiles[_i].gx == gx && global.smoke_tiles[_i].gy == gy) return;
@@ -233,8 +246,12 @@ function ai_skeleton_turn(eid) {
 	if (!eid.is_aggroed) return;
 	var tgx = eid.last_known_pgx, tgy = eid.last_known_pgy;
 	var dist = abs(eid.grid_x - tgx) + abs(eid.grid_y - tgy);
+	if (eid.attack_cd_turns > 0) eid.attack_cd_turns--;
 	if (dist <= 1) {
-		grid_attack_tile(tgx, tgy, eid.damage, eid, 0, 1);
+		if (eid.attack_cd_turns <= 0) {
+			add_telegraph_damage(tgx, tgy, c_red, 30, eid.damage, eid, 0, 1);
+			eid.attack_cd_turns = 2;
+		}
 	} else {
 		var step = grid_pathfind_step(eid.grid_x, eid.grid_y, tgx, tgy, false);
 		eid.grid_x += step.dx;
@@ -253,7 +270,7 @@ function ai_zombie_turn(eid) {
 	eid.alt_turn = !eid.alt_turn;
 	if (eid.hp < eid.max_hp * 0.5 && !can_attack) return; // half speed at low hp
 	if (dist <= 1 && can_attack) {
-		grid_attack_tile(tgx, tgy, eid.damage, eid, 0, 1);
+		add_telegraph_damage(tgx, tgy, c_red, 45, eid.damage, eid, 0, 1);
 	} else if (dist > 1) {
 		var step = grid_pathfind_step(eid.grid_x, eid.grid_y, tgx, tgy, false);
 		eid.grid_x += step.dx;
@@ -275,8 +292,12 @@ function ai_bat_turn(eid) {
 		eid.grid_x += step.dx;
 		eid.grid_y += step.dy;
 	}
+	if (eid.attack_cd_turns > 0) eid.attack_cd_turns--;
 	var dist2 = abs(eid.grid_x - tgx) + abs(eid.grid_y - tgy);
-	if (dist2 <= 1) grid_attack_tile(tgx, tgy, eid.damage, eid, 0, 1);
+	if (dist2 <= 1 && eid.attack_cd_turns <= 0) {
+		add_telegraph_damage(tgx, tgy, c_red, 20, eid.damage, eid, 0, 1);
+		eid.attack_cd_turns = 2;
+	}
 }
 
 function ai_ghost_turn(eid) {
@@ -290,7 +311,7 @@ function ai_ghost_turn(eid) {
 	var can_attack = (eid.alt_turn == false);
 	eid.alt_turn = !eid.alt_turn;
 	if (dist <= 1 && can_attack && !eid.phase_mode) {
-		grid_attack_tile(tgx, tgy, eid.damage, eid, 0, 1);
+		add_telegraph_damage(tgx, tgy, c_red, 30, eid.damage, eid, 0, 1);
 	} else if (dist > 1) {
 		var step = grid_pathfind_step(eid.grid_x, eid.grid_y, tgx, tgy, eid.phase_mode);
 		if (step.dx == 0 && step.dy == 0) {

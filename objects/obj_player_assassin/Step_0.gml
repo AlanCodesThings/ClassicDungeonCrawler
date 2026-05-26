@@ -1,4 +1,4 @@
-event_inherited();
+﻿event_inherited();
 if (is_dead) exit;
 
 // Dagger stab timer
@@ -8,6 +8,25 @@ if (thrust_timer > 0) thrust_timer--;
 if (invisible && vanish_timer > 0) {
 	vanish_timer--;
 	if (vanish_timer <= 0) { invisible = false; }
+}
+
+// Flurry channel — locks player for 2s, fires one hit every 20 frames
+if (flurry_active) {
+	if (flurry_timer mod 10 == 0 && flurry_hits_done < 6) {
+		var _hit_target = grid_cell_has_enemy(grid_x + flurry_adx, grid_y + flurry_ady);
+		if (instance_exists(_hit_target)) {
+			_hit_target.invincible_timer = 0;
+			deal_damage(_hit_target, x, y, damage, 0.1 + flurry_hits_done * 0.15, crit_mult, 0);
+		}
+		flurry_hits_done++;
+	}
+	flurry_timer--;
+	if (flurry_timer < 0) {
+		flurry_active  = false;
+		flurry_timer   = 0;
+		ability_dmg_cd = ability_dmg_max;
+	}
+	exit;
 }
 
 // Q — shadowstep: teleport adjacent to nearest enemy, hit 20 times
@@ -42,16 +61,6 @@ if (keyboard_check_pressed(ord("Q")) && ability_ult_cd <= 0) {
 	}
 }
 
-// SPACE — vanish
-if (keyboard_check_pressed(vk_space) && ability_dash_cd <= 0) {
-	invisible    = true;
-	vanish_timer = vanish_timer_max;
-	invincible_timer = 30;
-	ability_dash_cd  = ability_dash_max * 2; // 8s CD
-	move_cd = 6;
-	exit;
-}
-
 // RMB — smoke bomb
 if (mouse_check_button_pressed(mb_right) && ability_util_cd <= 0) {
 	for (var _sy = -1; _sy <= 1; _sy++) {
@@ -66,22 +75,19 @@ if (mouse_check_button_pressed(mb_right) && ability_util_cd <= 0) {
 	exit;
 }
 
-// E — flurry (6 hits on aim tile)
+// E — flurry: 2s channel, 6 hits spread across duration
 if (keyboard_check_pressed(ord("E")) && ability_dmg_cd <= 0) {
-	var snap = grid_snap_dir_8(aim_dx, aim_dy);
-	var tx   = grid_x + snap.dx;
-	var ty   = grid_y + snap.dy;
-	for (var _i = 0; _i < 6; _i++) {
-		var fc = 0.1 + _i * 0.15;
-		player_grid_attack(tx, ty, damage, fc, crit_mult);
-	}
-	ability_dmg_cd = ability_dmg_max;
-	move_cd = 6;
+	var snap      = grid_snap_dir_8(aim_dx, aim_dy);
+	flurry_active    = true;
+	flurry_timer     = 60;
+	flurry_hits_done = 0;
+	flurry_adx       = snap.dx;
+	flurry_ady       = snap.dy;
 	exit;
 }
 
-// LMB — dual stab (aim tile + perpendicular flank); auto-crit if invisible
-if (mouse_check_button_pressed(mb_left) && attack_cd <= 0) {
+// LMB / SPACE — dual stab (aim tile + perpendicular flank); auto-crit if invisible
+if ((mouse_check_button_pressed(mb_left) || keyboard_check_pressed(vk_space)) && attack_cd <= 0) {
 	var snap = grid_snap_dir_8(aim_dx, aim_dy);
 	var tx   = grid_x + snap.dx;
 	var ty   = grid_y + snap.dy;

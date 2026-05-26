@@ -1,8 +1,8 @@
 #macro TILE_WALL 0
 #macro TILE_FLOOR 1
 #macro TILE_STAIRS 2
-#macro MAP_W 52
-#macro MAP_H 40
+#macro MAP_W 40
+#macro MAP_H 30
 #macro TILE_SIZE 32
 
 function generate_dungeon(floor_num) {
@@ -143,7 +143,7 @@ function pick_enemy(f) {
 }
 
 function gen_boss_floor(floor_num) {
-	var ax = 3, ay = 3, aw = 46, ah = 34; // fits within 52x40 map
+	var ax = 2, ay = 2, aw = 36, ah = 26; // fits within 40x30 map
 	ds_grid_set_region(global.map_grid, ax, ay, ax + aw - 1, ay + ah - 1, TILE_FLOOR);
 	var my = ay + ah div 2;
 	for (var i = 1; i < ax; i++) {

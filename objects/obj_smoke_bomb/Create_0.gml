@@ -1,4 +1,5 @@
 depth = -4;
 // Smoke tiles are registered by the player when they throw the bomb
 // This object is visual-only; destroy itself after a short time
-timer = 120;
+timer  = 240;
+radius = TILE_SIZE * 2;
